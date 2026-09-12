@@ -106,7 +106,10 @@ function CodesPage() {
             size="sm"
             variant="destructive"
             onClick={() => {
-              if (state !== "connected") return toast.error("Connect an adapter first");
+              if (state !== "connected") {
+                toast.error("Connect an adapter first");
+                return;
+              }
               setConfirm(true);
             }}
           >

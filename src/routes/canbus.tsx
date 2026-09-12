@@ -58,7 +58,10 @@ function CanBusPage() {
   }, []);
 
   const start = async () => {
-    if (state !== "connected") return toast.error("Connect an adapter first");
+    if (state !== "connected") {
+      toast.error("Connect an adapter first");
+      return;
+    }
     if (!/CAN/i.test(protocolName)) {
       toast.warning("This vehicle is not on a CAN protocol", {
         description: `Detected: ${protocolName}. Monitor mode will show raw frames of whatever bus is active.`,

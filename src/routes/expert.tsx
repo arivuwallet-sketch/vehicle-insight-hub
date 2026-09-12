@@ -84,7 +84,10 @@ function ExpertPage() {
   const run = async (value: string) => {
     const c = value.trim();
     if (!c) return;
-    if (state !== "connected") return toast.error("Connect an adapter first");
+    if (state !== "connected") {
+      toast.error("Connect an adapter first");
+      return;
+    }
     setBusy(true);
     try {
       await sendRaw(c);

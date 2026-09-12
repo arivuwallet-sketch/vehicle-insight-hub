@@ -51,7 +51,8 @@ export async function openSerial(baudRate = 38400): Promise<Transport> {
       while (open) {
         const { value, done } = await reader.read();
         if (done) break;
-        if (value && handler) handler(value);
+        const h = handler as ((c: string) => void) | null;
+        if (value && h) h(value);
       }
     } catch {
       /* closed */
