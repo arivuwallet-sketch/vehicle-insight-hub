@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CodesRouteImport } from './routes/codes'
 import { Route as FreezeFrameRouteImport } from './routes/freeze-frame'
+import { Route as VehicleRouteImport } from './routes/vehicle'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -28,35 +29,44 @@ const FreezeFrameRoute = FreezeFrameRouteImport.update({
   path: '/freeze-frame',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VehicleRoute = VehicleRouteImport.update({
+  id: '/vehicle',
+  path: '/vehicle',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/codes': typeof CodesRoute
   '/freeze-frame': typeof FreezeFrameRoute
+  '/vehicle': typeof VehicleRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/codes': typeof CodesRoute
   '/freeze-frame': typeof FreezeFrameRoute
+  '/vehicle': typeof VehicleRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/codes': typeof CodesRoute
   '/freeze-frame': typeof FreezeFrameRoute
+  '/vehicle': typeof VehicleRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/codes' | '/freeze-frame'
+  fullPaths: '/' | '/codes' | '/freeze-frame' | '/vehicle'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/codes' | '/freeze-frame'
-  id: '__root__' | '/' | '/codes' | '/freeze-frame'
+  to: '/' | '/codes' | '/freeze-frame' | '/vehicle'
+  id: '__root__' | '/' | '/codes' | '/freeze-frame' | '/vehicle'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   CodesRoute: typeof CodesRoute
   FreezeFrameRoute: typeof FreezeFrameRoute
+  VehicleRoute: typeof VehicleRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FreezeFrameRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/vehicle': {
+      id: '/vehicle'
+      path: '/vehicle'
+      fullPath: '/vehicle'
+      preLoaderRoute: typeof VehicleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   CodesRoute: CodesRoute,
   FreezeFrameRoute: FreezeFrameRoute,
+  VehicleRoute: VehicleRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
