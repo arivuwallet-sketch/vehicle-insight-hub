@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AdaptersRouteImport } from './routes/adapters'
 import { Route as CanbusRouteImport } from './routes/canbus'
 import { Route as CodesRouteImport } from './routes/codes'
 import { Route as ExpertRouteImport } from './routes/expert'
@@ -19,6 +20,11 @@ import { Route as VehicleRouteImport } from './routes/vehicle'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdaptersRoute = AdaptersRouteImport.update({
+  id: '/adapters',
+  path: '/adapters',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CanbusRoute = CanbusRouteImport.update({
@@ -49,6 +55,7 @@ const VehicleRoute = VehicleRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/adapters': typeof AdaptersRoute
   '/canbus': typeof CanbusRoute
   '/codes': typeof CodesRoute
   '/expert': typeof ExpertRoute
@@ -57,6 +64,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/adapters': typeof AdaptersRoute
   '/canbus': typeof CanbusRoute
   '/codes': typeof CodesRoute
   '/expert': typeof ExpertRoute
@@ -66,6 +74,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/adapters': typeof AdaptersRoute
   '/canbus': typeof CanbusRoute
   '/codes': typeof CodesRoute
   '/expert': typeof ExpertRoute
@@ -75,12 +84,26 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/canbus' | '/codes' | '/expert' | '/freeze-frame' | '/vehicle'
+    | '/'
+    | '/adapters'
+    | '/canbus'
+    | '/codes'
+    | '/expert'
+    | '/freeze-frame'
+    | '/vehicle'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/canbus' | '/codes' | '/expert' | '/freeze-frame' | '/vehicle'
+  to:
+    | '/'
+    | '/adapters'
+    | '/canbus'
+    | '/codes'
+    | '/expert'
+    | '/freeze-frame'
+    | '/vehicle'
   id:
     | '__root__'
     | '/'
+    | '/adapters'
     | '/canbus'
     | '/codes'
     | '/expert'
@@ -90,6 +113,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdaptersRoute: typeof AdaptersRoute
   CanbusRoute: typeof CanbusRoute
   CodesRoute: typeof CodesRoute
   ExpertRoute: typeof ExpertRoute
@@ -104,6 +128,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/adapters': {
+      id: '/adapters'
+      path: '/adapters'
+      fullPath: '/adapters'
+      preLoaderRoute: typeof AdaptersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/canbus': {
@@ -146,6 +177,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdaptersRoute: AdaptersRoute,
   CanbusRoute: CanbusRoute,
   CodesRoute: CodesRoute,
   ExpertRoute: ExpertRoute,
