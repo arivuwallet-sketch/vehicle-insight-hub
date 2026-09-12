@@ -1,191 +1,250 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AlertTriangle, CheckCircle2, Download, Pause, Play, Save } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  Activity,
+  Gauge,
+  Network,
+  ScanLine,
+  ShieldCheck,
+  SlidersHorizontal,
+  Thermometer,
+  TriangleAlert,
+  Wrench,
+} from "lucide-react";
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
+import { PageHeader } from "@/components/torquedeck/PageHeader";
 import { Badge } from "@/components/ui/badge";
-import { Gauge, MiniStat } from "@/components/obd/Gauge";
-import { LiveChart } from "@/components/obd/LiveChart";
-import { OfflineNotice } from "@/components/obd/ConnectionBar";
-import { DASH_PIDS, GRAPH_PIDS, PIDS, type PidId } from "@/lib/obd/pids";
-import { useObd } from "@/lib/obd/store";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { useTorque } from "@/lib/torquedeck/store";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "TorqueDeck — Live OBD-II Diagnostics Dashboard" },
+      { title: "Diagnostic Dashboard | TORQUEDECK" },
       {
         name: "description",
         content:
-          "Browser-based OBD-II deep scanner: live sensor gauges, fault codes, freeze frame and CAN bus tools for USB and BLE ELM327 adapters.",
+          "Live vehicle telemetry, module health and readiness monitors in one professional diagnostic dashboard.",
       },
-      { property: "og:title", content: "TorqueDeck — Live OBD-II Diagnostics Dashboard" },
-      {
-        property: "og:description",
-        content:
-          "Live gauges, graphs and deep fault diagnostics straight from your car's ECU, in the browser.",
-      },
+      { property: "og:title", content: "Diagnostic Dashboard | TORQUEDECK" },
+      { property: "og:description", content: "Live vehicle telemetry and module health at a glance." },
     ],
   }),
   component: Dashboard,
 });
 
+const MONITORS = [
+  "Misfire",
+  "Fuel System",
+  "Components",
+  "Catalyst",
+  "Evap System",
+  "O2 Sensor",
+  "O2 Heater",
+  "EGR System",
+];
+
+function Stat({
+  label,
+  value,
+  unit,
+  icon: Icon,
+  tone = "primary",
+}: {
+  label: string;
+  value: string | number;
+  unit: string;
+  icon: typeof Gauge;
+  tone?: "primary" | "success" | "warning" | "destructive";
+}) {
+  const toneClass = {
+    primary: "text-primary",
+    success: "text-success",
+    warning: "text-warning",
+    destructive: "text-destructive",
+  }[tone];
+  return (
+    <Card className="panel">
+      <CardContent className="flex items-center gap-3 p-4">
+        <Icon className={`h-5 w-5 ${toneClass}`} />
+        <div className="min-w-0">
+          <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{label}</div>
+          <div className="font-mono text-xl tabular-nums">
+            {value}
+            <span className="ml-1 text-xs text-muted-foreground">{unit}</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function Dashboard() {
-  const {
-    live,
-    history,
-    milOn,
-    dtcCount,
-    dtcs,
-    pendingDtcs,
-    polling,
-    setPolling,
-    supportedPids,
-    activePids,
-    setActivePids,
-    saveSession,
-    state,
-    vehicles,
-    activeVehicleId,
-    setActiveVehicleId,
-  } = useObd();
+  const { telemetry, history, modules, dtcs, runSmartScan, scanProgress, vehicle } = useTorque();
 
-  const toggle = (id: PidId) =>
-    setActivePids(activePids.includes(id) ? activePids.filter((p) => p !== id) : [...activePids, id]);
-
-  const secondary: PidId[] = ["stft1", "ltft1", "stft2", "ltft2", "map", "o2b1s1", "o2b1s2", "fuelLevel", "timing", "ambient", "baro", "runtime"];
+  const chartData = history.slice(-60).map((h, i) => ({ i, rpm: h.rpm, coolant: h.coolant, load: h.load }));
+  const faulted = modules.filter((m) => m.status === "fault");
+  const critical = dtcs.filter((d) => d.severity === "critical").length;
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Live Diagnostics</h1>
-          <p className="text-sm text-muted-foreground">
-            Mode 01 sensor stream, refreshed as fast as the bus allows.
-          </p>
-        </div>
-        <div className="no-print flex flex-wrap items-center gap-2">
-          <select
-            value={activeVehicleId ?? ""}
-            onChange={(e) => setActiveVehicleId(e.target.value || null)}
-            className="h-9 rounded-md border border-input bg-surface px-3 text-sm"
-            aria-label="Active vehicle"
-          >
-            <option value="">Unassigned vehicle</option>
-            {vehicles.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.nickname || `${v.make} ${v.model}`}
-              </option>
-            ))}
-          </select>
-          <Button variant="outline" size="sm" onClick={() => setPolling(!polling)}>
-            {polling ? <Pause className="size-4" /> : <Play className="size-4" />}
-            {polling ? "Pause" : "Resume"}
+    <div>
+      <PageHeader
+        title="Diagnostic Dashboard"
+        description={`${vehicle.year} ${vehicle.make} ${vehicle.model} — live telemetry and system health.`}
+        actions={
+          <Button onClick={() => void runSmartScan()} className="gap-2">
+            <ScanLine className="h-4 w-4" /> Smart Scan All Modules
           </Button>
-          <Button variant="outline" size="sm" onClick={() => saveSession()}>
-            <Save className="size-4" /> Save session
-          </Button>
-          <Button size="sm" onClick={() => window.print()}>
-            <Download className="size-4" /> Export PDF
-          </Button>
-        </div>
-      </header>
+        }
+      />
 
-      <OfflineNotice />
-
-      <div className="grid gap-4 md:grid-cols-3">
-        <div
-          className={cn(
-            "panel flex items-center gap-3 p-4",
-            milOn ? "border-danger/60" : "border-ok/40",
-          )}
-        >
-          {milOn ? (
-            <AlertTriangle className="size-7 text-danger" />
-          ) : (
-            <CheckCircle2 className="size-7 text-ok" />
-          )}
-          <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">
-              Malfunction lamp
-            </div>
-            <div className="font-display text-lg font-semibold">{milOn ? "ON" : "Off"}</div>
-          </div>
+      {scanProgress > 0 && scanProgress < 100 && (
+        <div className="mb-5">
+          <Progress value={scanProgress} />
+          <p className="mt-1 font-mono text-xs text-muted-foreground">Scanning modules… {scanProgress}%</p>
         </div>
-        <Link to="/codes" className="panel flex items-center justify-between p-4 hover:border-signal/50">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Stored codes</div>
-            <div className="readout text-2xl font-semibold">{dtcs.length || dtcCount}</div>
-          </div>
-          <Badge variant={dtcs.length ? "destructive" : "secondary"}>
-            {dtcs.length ? "Attention" : "Clear"}
-          </Badge>
-        </Link>
-        <Link to="/codes" className="panel flex items-center justify-between p-4 hover:border-signal/50">
-          <div>
-            <div className="text-xs uppercase tracking-wider text-muted-foreground">Pending codes</div>
-            <div className="readout text-2xl font-semibold">{pendingDtcs.length}</div>
-          </div>
-          <Badge variant="secondary">Mode 07</Badge>
-        </Link>
+      )}
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Stat label="Engine speed" value={telemetry?.rpm ?? 0} unit="rpm" icon={Gauge} />
+        <Stat label="Coolant" value={telemetry?.coolant ?? 0} unit="°C" icon={Thermometer} tone="warning" />
+        <Stat label="Engine load" value={telemetry?.load ?? 0} unit="%" icon={Activity} tone="success" />
+        <Stat
+          label="Stored codes"
+          value={dtcs.length}
+          unit={`${critical} critical`}
+          icon={TriangleAlert}
+          tone={dtcs.length ? "destructive" : "success"}
+        />
       </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Primary cluster
-        </h2>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
-          {DASH_PIDS.map((p) => (
-            <Gauge key={p} pid={p} value={live[p]} />
-          ))}
-        </div>
-      </section>
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
+        <Card className="panel xl:col-span-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider">Live telemetry</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[280px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="rpmFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-chart-1)" stopOpacity={0.5} />
+                    <stop offset="100%" stopColor="var(--color-chart-1)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="i" hide />
+                <YAxis
+                  stroke="var(--color-muted-foreground)"
+                  fontSize={11}
+                  domain={[0, 4500]}
+                  width={44}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--color-card)",
+                    border: "1px solid var(--color-border)",
+                    borderRadius: 8,
+                    fontSize: 12,
+                  }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="rpm"
+                  stroke="var(--color-chart-1)"
+                  fill="url(#rpmFill)"
+                  strokeWidth={2}
+                  isAnimationActive={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Fuel, mixture &amp; environment
-        </h2>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-6">
-          {secondary.map((p) => (
-            <MiniStat key={p} pid={p} value={live[p]} />
-          ))}
-        </div>
-      </section>
+        <Card className="panel">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold uppercase tracking-wider">Readiness monitors</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-2">
+            {MONITORS.map((m, i) => {
+              const ready = i % 4 !== 3;
+              return (
+                <div
+                  key={m}
+                  className="flex items-center justify-between rounded-md border border-border bg-background/40 px-2.5 py-2"
+                >
+                  <span className="truncate text-xs">{m}</span>
+                  <Badge variant={ready ? "default" : "secondary"} className="text-[10px]">
+                    {ready ? "READY" : "INC"}
+                  </Badge>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      </div>
 
-      <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Live graphs
-        </h2>
-        <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {GRAPH_PIDS.map((p) => (
-            <LiveChart key={p} pid={p} data={history[p]} />
-          ))}
-        </div>
-      </section>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <Card className="panel">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wider">
+              <Network className="h-4 w-4 text-primary" /> Module health
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {modules.map((m) => (
+              <div
+                key={m.id}
+                className="flex items-center justify-between rounded-md border border-border bg-background/40 px-3 py-2"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-medium">{m.abbr}</div>
+                  <div className="truncate text-[11px] text-muted-foreground">
+                    {m.name} · {m.bus} · {m.address}
+                  </div>
+                </div>
+                <Badge
+                  variant={m.status === "fault" ? "destructive" : m.status === "pass" ? "default" : "secondary"}
+                  className="shrink-0"
+                >
+                  {m.status === "fault" ? `${m.dtcs.length} DTC` : m.status.toUpperCase()}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
 
-      <section className="no-print panel p-4">
-        <h2 className="mb-1 text-sm font-semibold">Polled parameters</h2>
-        <p className="mb-3 text-xs text-muted-foreground">
-          {state === "connected" && supportedPids.length
-            ? `${supportedPids.length} parameters reported as supported by this ECU. Fewer selected PIDs means a faster refresh rate.`
-            : "Select which parameters to request once connected. Fewer PIDs refresh faster."}
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {PIDS.filter((p) => !supportedPids.length || supportedPids.includes(p.id)).map((p) => (
-            <button
-              key={p.id}
-              onClick={() => toggle(p.id)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs transition-colors",
-                activePids.includes(p.id)
-                  ? "border-signal bg-signal/15 text-signal"
-                  : "border-border text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {p.short}
-            </button>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+          {[
+            { to: "/topology", title: "Topology map", body: "See the full ECU network", icon: Network },
+            { to: "/fault-codes", title: "Fault codes", body: `${dtcs.length} stored codes`, icon: TriangleAlert },
+            { to: "/bi-directional", title: "Actuator tests", body: "Command components", icon: SlidersHorizontal },
+            { to: "/service-resets", title: "Service resets", body: "Oil, EPB, DPF, SAS", icon: Wrench },
+          ].map(({ to, title, body, icon: Icon }) => (
+            <Link key={to} to={to}>
+              <Card className="panel h-full transition-colors hover:border-primary">
+                <CardContent className="p-4">
+                  <Icon className="h-5 w-5 text-primary" />
+                  <div className="mt-3 text-sm font-semibold">{title}</div>
+                  <div className="text-xs text-muted-foreground">{body}</div>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
+          <Card className="panel sm:col-span-2 lg:col-span-1 xl:col-span-2">
+            <CardContent className="flex items-center gap-3 p-4">
+              <ShieldCheck className="h-5 w-5 text-success" />
+              <div className="text-xs text-muted-foreground">
+                {faulted.length
+                  ? `${faulted.length} module(s) reporting faults. Review the topology map for details.`
+                  : "No module faults recorded in this session. Run a smart scan to refresh."}
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

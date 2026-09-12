@@ -11,9 +11,10 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { ObdProvider } from "@/lib/obd/store";
-import { AppShell } from "@/components/obd/AppShell";
+import { AppShell } from "@/components/torquedeck/AppShell";
 import { Toaster } from "@/components/ui/sonner";
+import { TorqueProvider } from "@/lib/torquedeck/store";
+
 
 function NotFoundComponent() {
   return (
@@ -80,7 +81,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { name: "author", content: "TorqueDeck" },
+      { title: "TORQUEDECK — Professional Automotive Diagnostic Tablet" },
+      {
+        name: "description",
+        content:
+          "TORQUEDECK is a professional OBD diagnostic workspace: full-system scan, live data graphing, bi-directional tests, service resets and ECU coding.",
+      },
+      { name: "author", content: "TORQUEDECK" },
+      { property: "og:title", content: "TORQUEDECK — Professional Automotive Diagnostic Tablet" },
+      {
+        property: "og:description",
+        content: "Full-system vehicle diagnostics with live telemetry, DTC analysis and bi-directional control.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -89,15 +101,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap",
-      },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
+
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -106,7 +113,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <HeadContent />
       </head>
@@ -123,13 +130,14 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ObdProvider>
+      <TorqueProvider>
         <AppShell>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
           <Outlet />
         </AppShell>
-        <Toaster position="bottom-right" richColors />
-      </ObdProvider>
+        <Toaster position="top-right" />
+      </TorqueProvider>
     </QueryClientProvider>
   );
 }
+
