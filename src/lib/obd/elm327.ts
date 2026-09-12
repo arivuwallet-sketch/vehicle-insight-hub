@@ -309,6 +309,31 @@ export class Elm327 {
     onStep?.(`Protocol: ${this.protocolName}`);
   }
 
+  /** Start a streaming monitor (ATMA / ATMR / ATMT). Frames arrive via onStream. */
+  async startMonitor(cmd: string, onFrame: (line: string) => void) {
+    if (!this.transport || !this.transport.isOpen()) throw new Error("Adapter not connected");
+    this.onStream = onFrame;
+    this.streaming = true;
+    this.buffer = "";
+    this.push("tx", cmd);
+    await this.transport.write(cmd + "\r");
+  }
+
+  /** Any character stops an ELM327 monitor session. */
+  async stopMonitor() {
+    if (this.transport && this.transport.isOpen()) {
+      try {
+        await this.transport.write("\r");
+      } catch {
+        /* ignore */
+      }
+    }
+    await new Promise((r) => setTimeout(r, 250));
+    this.streaming = false;
+    this.onStream = null;
+    this.buffer = "";
+  }
+
   async close() {
     try {
       await this.transport?.close();
