@@ -1,170 +1,212 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FileText, Save, Trash2, Warehouse } from "lucide-react";
-
-import { PageHeader } from "@/components/torquedeck/PageHeader";
-import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
+import { Car, Check, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { openReport } from "@/lib/torquedeck/report";
-import { useTorque } from "@/lib/torquedeck/store";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { useObd, uid, type Vehicle } from "@/lib/obd/store";
+import { decodeVin } from "@/lib/obd/vin";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/garage")({
   head: () => ({
     meta: [
-      { title: "Garage & Session History | TORQUEDECK" },
+      { title: "Garage — Multi-Vehicle Tracking — TorqueDeck" },
       {
         name: "description",
-        content: "Saved diagnostic sessions per vehicle with technician notes and printable workshop PDF reports.",
+        content:
+          "Track several cars in one place: VIN, plate, odometer and notes per vehicle, with scan sessions filed against the right car.",
       },
-      { property: "og:title", content: "Garage & Session History | TORQUEDECK" },
-      { property: "og:description", content: "Stored vehicle sessions and printable diagnostic reports." },
+      { property: "og:title", content: "Garage — Multi-Vehicle Tracking — TorqueDeck" },
+      {
+        property: "og:description",
+        content: "Keep every car you service in one garage with its own scan history.",
+      },
     ],
   }),
   component: GaragePage,
 });
 
+const empty = (): Vehicle => ({
+  id: uid(),
+  nickname: "",
+  make: "",
+  model: "",
+  year: "",
+  vin: "",
+  plate: "",
+  odometer: "",
+  notes: "",
+});
+
 function GaragePage() {
-  const {
-    sessions,
-    saveSession,
-    deleteSession,
-    technician,
-    setTechnician,
-    notes,
-    setNotes,
-    vehicle,
-    modules,
-    dtcs,
-    telemetry,
-  } = useTorque();
+  const { vehicles, saveVehicle, deleteVehicle, activeVehicleId, setActiveVehicleId, vin, sessions } =
+    useObd();
+  const [draft, setDraft] = useState<Vehicle | null>(null);
+
+  const set = (k: keyof Vehicle, v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d));
 
   return (
-    <div>
-      <PageHeader
-        title="Garage & Session History"
-        description="Sessions are stored on this device. Export any session as a printable workshop report."
-        actions={
-          <>
-            <Button variant="outline" className="gap-2" onClick={saveSession}>
-              <Save className="h-4 w-4" /> Save current session
+    <div className="mx-auto max-w-5xl space-y-6">
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-bold tracking-wide">Garage</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Every scan and saved session is filed against the selected vehicle.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {vin && !vehicles.some((v) => v.vin === vin) && (
+            <Button
+              variant="secondary"
+              onClick={() => setDraft({ ...empty(), vin, nickname: "Connected car" })}
+            >
+              Add connected car ({vin.slice(-6)})
+            </Button>
+          )}
+          <Button onClick={() => setDraft(empty())}>
+            <Plus className="size-4" /> Add vehicle
+          </Button>
+        </div>
+      </header>
+
+      {vehicles.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
+          <Car className="mx-auto mb-3 size-8 opacity-50" />
+          No vehicles yet. Add one to start keeping a service history.
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {vehicles.map((v) => {
+            const active = v.id === activeVehicleId;
+            const decoded = v.vin ? decodeVin(v.vin) : null;
+            const count = sessions.filter((s) => s.vehicleId === v.id).length;
+            return (
+              <div
+                key={v.id}
+                className={cn(
+                  "rounded-lg border bg-card p-4 transition-colors",
+                  active ? "border-signal" : "border-border",
+                )}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="font-display font-semibold tracking-wide">
+                      {v.nickname || `${v.make} ${v.model}`.trim() || "Untitled vehicle"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {[v.year, v.make, v.model].filter(Boolean).join(" ") || "No details"}
+                    </div>
+                  </div>
+                  {active && (
+                    <span className="rounded bg-signal/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-signal">
+                      Active
+                    </span>
+                  )}
+                </div>
+
+                <dl className="readout mt-3 space-y-1 text-xs text-muted-foreground">
+                  {v.vin && <div>VIN {v.vin}</div>}
+                  {v.plate && <div>Plate {v.plate}</div>}
+                  {v.odometer && <div>{v.odometer} odometer</div>}
+                  {decoded?.valid && (
+                    <div>
+                      {decoded.region} · {decoded.modelYear}
+                    </div>
+                  )}
+                  <div>
+                    {count} saved session{count === 1 ? "" : "s"}
+                  </div>
+                </dl>
+                {v.notes && <p className="mt-2 text-xs text-muted-foreground">{v.notes}</p>}
+
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    size="sm"
+                    variant={active ? "secondary" : "default"}
+                    onClick={() => setActiveVehicleId(active ? null : v.id)}
+                  >
+                    <Check className="size-3.5" /> {active ? "Deselect" : "Select"}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setDraft(v)}>
+                    Edit
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="ml-auto text-danger"
+                    onClick={() => deleteVehicle(v.id)}
+                  >
+                    <Trash2 className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={!!draft} onOpenChange={(o) => !o && setDraft(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Vehicle details</DialogTitle>
+            <DialogDescription>Stored on this computer only.</DialogDescription>
+          </DialogHeader>
+          {draft && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                placeholder="Nickname"
+                value={draft.nickname}
+                onChange={(e) => set("nickname", e.target.value)}
+              />
+              <Input placeholder="Year" value={draft.year} onChange={(e) => set("year", e.target.value)} />
+              <Input placeholder="Make" value={draft.make} onChange={(e) => set("make", e.target.value)} />
+              <Input placeholder="Model" value={draft.model} onChange={(e) => set("model", e.target.value)} />
+              <Input
+                placeholder="VIN"
+                value={draft.vin}
+                onChange={(e) => set("vin", e.target.value.toUpperCase())}
+              />
+              <Input placeholder="Plate" value={draft.plate} onChange={(e) => set("plate", e.target.value)} />
+              <Input
+                placeholder="Odometer"
+                value={draft.odometer}
+                onChange={(e) => set("odometer", e.target.value)}
+                className="sm:col-span-2"
+              />
+              <Textarea
+                placeholder="Notes — recent work, known faults…"
+                value={draft.notes}
+                onChange={(e) => set("notes", e.target.value)}
+                className="sm:col-span-2"
+              />
+            </div>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" onClick={() => setDraft(null)}>
+              Cancel
             </Button>
             <Button
-              className="gap-2"
-              onClick={() =>
-                openReport({
-                  vehicle,
-                  modules,
-                  dtcs,
-                  technician,
-                  notes,
-                  batteryVolts: telemetry?.battery ?? 14.1,
-                })
-              }
+              onClick={() => {
+                if (draft) {
+                  saveVehicle(draft);
+                  setActiveVehicleId(draft.id);
+                }
+                setDraft(null);
+              }}
             >
-              <FileText className="h-4 w-4" /> Print report
+              Save vehicle
             </Button>
-          </>
-        }
-      />
-
-      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-        <Card className="panel h-fit">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-xs uppercase tracking-wider">Report details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="tech" className="text-xs">
-                Technician
-              </Label>
-              <Input
-                id="tech"
-                value={technician}
-                onChange={(e) => setTechnician(e.target.value)}
-                placeholder="Name or workshop ID"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="notes" className="text-xs">
-                Technician notes
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={8}
-                placeholder="Findings, measurements, parts fitted, road test result…"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
-          {sessions.length ? (
-            sessions.map((s) => (
-              <Card key={s.id} className="panel">
-                <CardContent className="flex flex-wrap items-start justify-between gap-4 p-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Warehouse className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold">
-                        {s.vehicle.year} {s.vehicle.make} {s.vehicle.model}
-                      </span>
-                    </div>
-                    <div className="mt-1 font-mono text-[11px] text-muted-foreground">
-                      {s.vehicle.vin} · {new Date(s.savedAt).toLocaleString()} · {s.technician}
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Badge variant={s.dtcs.length ? "destructive" : "default"}>{s.dtcs.length} DTC</Badge>
-                      <Badge variant="outline">
-                        {s.modules.filter((m) => m.status === "fault").length} faulted modules
-                      </Badge>
-                      <Badge variant="outline">{s.batteryVolts.toFixed(2)}V</Badge>
-                    </div>
-                    {s.notes && <p className="mt-2 max-w-xl text-xs text-muted-foreground">{s.notes}</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() =>
-                        openReport({
-                          vehicle: s.vehicle,
-                          modules: s.modules.map((m) => ({
-                            abbr: m.name,
-                            name: m.name,
-                            status: m.status,
-                            dtcs: Array.from({ length: m.dtcCount }, (_, i) => String(i)),
-                          })),
-                          dtcs: s.dtcs,
-                          technician: s.technician,
-                          notes: s.notes,
-                          batteryVolts: s.batteryVolts,
-                        })
-                      }
-                    >
-                      <FileText className="h-3.5 w-3.5" /> Report
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => deleteSession(s.id)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Card className="panel">
-              <CardContent className="p-10 text-center text-sm text-muted-foreground">
-                No saved sessions yet. Run a scan, then choose “Save current session”.
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
