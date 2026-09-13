@@ -309,6 +309,173 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     }
   }, [elm]);
 
+  /* ---------------- deep scan (all modules, all modes) ---------------- */
+
+  const deepScan = useCallback(async () => {
+    if (!elm.connected) {
+      toast.error("Connect an adapter first");
+      return;
+    }
+    setDeepScanning(true);
+    const step = (s: string) => setDeepStep(s);
+    try {
+      await elm.send("ATH1");
+
+      /* 1. module discovery */
+      step("Discovering control modules…");
+      const disc = await elm.send("0100", 9000);
+      const responders = splitByEcu(disc);
+      const found: EcuReport[] = responders.map((r) => ({
+        header: r.header,
+        label: ecuLabel(r.header),
+        stored: [],
+        pending: [],
+        permanent: [],
+      }));
+
+      /* 2. per-module fault memory, modes 03 / 07 / 0A */
+      for (const [mode, key] of [
+        ["03", "stored"],
+        ["07", "pending"],
+        ["0A", "permanent"],
+      ] as const) {
+        step(`Reading mode ${mode} fault memory…`);
+        const resp = await elm.send(mode, 9000);
+        for (const r of splitByEcu(resp)) {
+          const target = found.find((f) => f.header === r.header);
+          const modeByte = 0x40 + parseInt(mode, 16);
+          const i = r.bytes.indexOf(modeByte);
+          if (i === -1) continue;
+          let rest = r.bytes.slice(i + 1);
+          if (rest.length % 2 === 1) rest = rest.slice(1);
+          const codes = decodeDtcBytes(rest);
+          if (!target) {
+            found.push({
+              header: r.header,
+              label: ecuLabel(r.header),
+              stored: key === "stored" ? codes : [],
+              pending: key === "pending" ? codes : [],
+              permanent: key === "permanent" ? codes : [],
+            });
+          } else {
+            target[key] = codes;
+          }
+        }
+      }
+      setEcus(found);
+
+      /* 3. readiness monitors, since-clear and this drive cycle */
+      step("Reading readiness monitors…");
+      const st = await elm.send("0101", 6000);
+      const stBytes = splitByEcu(st)[0]?.bytes ?? [];
+      const stIdx = stBytes.indexOf(0x41);
+      setReadiness(
+        stIdx !== -1 ? decodeReadiness(stBytes.slice(stIdx + 2, stIdx + 6)) : null,
+      );
+      const cyc = await elm.send("0141", 6000);
+      const cycBytes = splitByEcu(cyc)[0]?.bytes ?? [];
+      const cycIdx = cycBytes.indexOf(0x41);
+      setReadinessCycle(
+        cycIdx !== -1 ? decodeReadiness(cycBytes.slice(cycIdx + 2, cycIdx + 6)) : null,
+      );
+      const diesel = stIdx !== -1 && ((stBytes[stIdx + 3] ?? 0) & 0x08) !== 0;
+
+      /* 4. Mode 06 on-board monitoring test results */
+      step("Enumerating mode 06 monitors…");
+      const mids: number[] = [];
+      for (const base of ["00", "20", "40", "60", "80", "A0"]) {
+        const resp = await elm.send(`06${base}`, 6000);
+        const bytes = splitByEcu(resp)[0]?.bytes ?? [];
+        const i = bytes.indexOf(0x46);
+        if (i === -1) break;
+        const mask = bytes.slice(i + 2, i + 6);
+        if (mask.length < 4) break;
+        const offset = parseInt(base, 16);
+        const word =
+          ((mask[0] ?? 0) << 24) | ((mask[1] ?? 0) << 16) | ((mask[2] ?? 0) << 8) | (mask[3] ?? 0);
+        for (let bit = 0; bit < 32; bit++) {
+          if (word & (1 << (31 - bit))) mids.push(offset + bit + 1);
+        }
+        if (!(word & 1)) break;
+      }
+      const tests: MonitorTest[] = [];
+      let done = 0;
+      for (const mid of mids) {
+        done += 1;
+        step(`Mode 06 monitor ${done}/${mids.length}…`);
+        const hexMid = mid.toString(16).padStart(2, "0").toUpperCase();
+        const resp = await elm.send(`06${hexMid}`, 6000);
+        for (const r of splitByEcu(resp)) {
+          const i = r.bytes.indexOf(0x46);
+          if (i === -1) continue;
+          tests.push(...parseMode06(r.bytes.slice(i + 1)));
+        }
+      }
+      setMonitorTests(tests);
+
+      /* 5. Mode 09 vehicle information, including in-use performance tracking */
+      step("Reading mode 09 vehicle information…");
+      const info: { pid: string; label: string; value: string }[] = [];
+      const supp = await elm.send("0900", 6000);
+      const suppBytes = splitByEcu(supp)[0]?.bytes ?? [];
+      const si = suppBytes.indexOf(0x49);
+      const items: string[] = [];
+      if (si !== -1) {
+        const mask = suppBytes.slice(si + 2, si + 6);
+        const word =
+          ((mask[0] ?? 0) << 24) | ((mask[1] ?? 0) << 16) | ((mask[2] ?? 0) << 8) | (mask[3] ?? 0);
+        for (let bit = 0; bit < 32; bit++) {
+          if (word & (1 << (31 - bit)))
+            items.push((bit + 1).toString(16).padStart(2, "0").toUpperCase());
+        }
+      }
+      await elm.send("ATH0");
+      for (const pid of items) {
+        if (/^(01|03|05|07|09)$/.test(pid)) continue; // message-count items
+        const resp = await elm.send(`09${pid}`, 8000);
+        if (isNegative(resp)) continue;
+        if (pid === "08" || pid === "0B") {
+          const payload = extractPayload(resp, 9, pid) ?? [];
+          setIpt(parseIpt(payload, pid === "0B" || diesel));
+          continue;
+        }
+        if (pid === "06") {
+          const payload = extractPayload(resp, 9, pid) ?? [];
+          const cvn = payload
+            .slice(1)
+            .map((b) => b.toString(16).padStart(2, "0").toUpperCase())
+            .join("");
+          if (cvn) info.push({ pid, label: MODE09_ITEMS[pid] ?? pid, value: cvn });
+          continue;
+        }
+        const text = asciiFrom(resp);
+        if (text) info.push({ pid, label: MODE09_ITEMS[pid] ?? `Item ${pid}`, value: text });
+      }
+      setMode09(info);
+
+      /* 6. supported PID census across modules */
+      step("Mapping supported live data…");
+      await probeSupportedPids();
+
+      setLastDeepScan(Date.now());
+      toast.success("Deep scan complete", {
+        description: `${found.length} module(s), ${tests.length} monitor test(s) read.`,
+      });
+    } catch (e) {
+      toast.error("Deep scan failed", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+    } finally {
+      try {
+        await elm.send("ATH0");
+      } catch {
+        /* ignore */
+      }
+      setDeepScanning(false);
+      setDeepStep("");
+    }
+  }, [elm, probeSupportedPids]);
+
   const connect = useCallback(
     async (kind: "serial" | "bluetooth") => {
       if (state === "connecting") return;
