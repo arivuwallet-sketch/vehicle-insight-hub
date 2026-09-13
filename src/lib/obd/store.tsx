@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   Elm327,
   bluetoothSupported,
+  decodeDtcBytes,
   extractPayload,
   isNegative,
   openBluetooth,
@@ -21,7 +22,25 @@ import {
   serialSupported,
   type ObdLogEntry,
 } from "./elm327";
+import {
+  MODE09_ITEMS,
+  decodeReadiness,
+  ecuLabel,
+  parseIpt,
+  parseMode06,
+  splitByEcu,
+  type MonitorTest,
+  type ReadinessResult,
+} from "./monitors";
 import { PIDS, PID_BY_ID, type PidDef, type PidId } from "./pids";
+
+export interface EcuReport {
+  header: string;
+  label: string;
+  stored: string[];
+  pending: string[];
+  permanent: string[];
+}
 
 export type ConnState = "disconnected" | "connecting" | "connected" | "error";
 
