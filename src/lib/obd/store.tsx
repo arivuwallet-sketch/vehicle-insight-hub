@@ -721,6 +721,8 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       calId, ecuName, freeze, logEntries, vehicles, activeVehicleId, sessions,
       connect, disconnect, reconnect, scanDtcs, clearDtcs, readFreezeFrame,
       readVehicleInfo, sendRaw, saveSession,
+      ecus, readiness, readinessCycle, monitorTests, ipt, mode09,
+      deepScanning, deepStep, lastDeepScan, deepScan,
     ],
   );
 
