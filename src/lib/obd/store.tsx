@@ -201,6 +201,15 @@ export function ObdProvider({ children }: { children: ReactNode }) {
   const [ecuName, setEcuName] = useState<string | null>(null);
   const [freeze, setFreeze] = useState<FreezeFrame | null>(null);
   const [logEntries, setLogEntries] = useState<ObdLogEntry[]>([]);
+  const [ecus, setEcus] = useState<EcuReport[]>([]);
+  const [readiness, setReadiness] = useState<ReadinessResult | null>(null);
+  const [readinessCycle, setReadinessCycle] = useState<ReadinessResult | null>(null);
+  const [monitorTests, setMonitorTests] = useState<MonitorTest[]>([]);
+  const [ipt, setIpt] = useState<{ label: string; value: number }[]>([]);
+  const [mode09, setMode09] = useState<{ pid: string; label: string; value: string }[]>([]);
+  const [deepScanning, setDeepScanning] = useState(false);
+  const [deepStep, setDeepStep] = useState("");
+  const [lastDeepScan, setLastDeepScan] = useState<number | null>(null);
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicleId, setActiveVehicleIdState] = useState<string | null>(null);
