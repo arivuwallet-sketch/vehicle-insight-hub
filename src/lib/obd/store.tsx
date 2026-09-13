@@ -109,6 +109,16 @@ interface ObdContextValue {
   ecuName: string | null;
   freeze: FreezeFrame | null;
   logEntries: ObdLogEntry[];
+  ecus: EcuReport[];
+  readiness: ReadinessResult | null;
+  readinessCycle: ReadinessResult | null;
+  monitorTests: MonitorTest[];
+  ipt: { label: string; value: number }[];
+  mode09: { pid: string; label: string; value: string }[];
+  deepScanning: boolean;
+  deepStep: string;
+  lastDeepScan: number | null;
+  deepScan: () => Promise<void>;
   connect: (kind: "serial" | "bluetooth") => Promise<void>;
   disconnect: () => Promise<void>;
   reconnect: () => Promise<void>;
