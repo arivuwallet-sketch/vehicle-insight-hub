@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdaptersRouteImport } from './routes/adapters'
 import { Route as CanbusRouteImport } from './routes/canbus'
 import { Route as CodesRouteImport } from './routes/codes'
+import { Route as DeepScanRouteImport } from './routes/deep-scan'
 import { Route as ExpertRouteImport } from './routes/expert'
 import { Route as FreezeFrameRouteImport } from './routes/freeze-frame'
 import { Route as GarageRouteImport } from './routes/garage'
@@ -37,6 +38,11 @@ const CanbusRoute = CanbusRouteImport.update({
 const CodesRoute = CodesRouteImport.update({
   id: '/codes',
   path: '/codes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeepScanRoute = DeepScanRouteImport.update({
+  id: '/deep-scan',
+  path: '/deep-scan',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ExpertRoute = ExpertRouteImport.update({
@@ -70,6 +76,7 @@ export interface FileRoutesByFullPath {
   '/adapters': typeof AdaptersRoute
   '/canbus': typeof CanbusRoute
   '/codes': typeof CodesRoute
+  '/deep-scan': typeof DeepScanRoute
   '/expert': typeof ExpertRoute
   '/freeze-frame': typeof FreezeFrameRoute
   '/garage': typeof GarageRoute
@@ -81,6 +88,7 @@ export interface FileRoutesByTo {
   '/adapters': typeof AdaptersRoute
   '/canbus': typeof CanbusRoute
   '/codes': typeof CodesRoute
+  '/deep-scan': typeof DeepScanRoute
   '/expert': typeof ExpertRoute
   '/freeze-frame': typeof FreezeFrameRoute
   '/garage': typeof GarageRoute
@@ -93,6 +101,7 @@ export interface FileRoutesById {
   '/adapters': typeof AdaptersRoute
   '/canbus': typeof CanbusRoute
   '/codes': typeof CodesRoute
+  '/deep-scan': typeof DeepScanRoute
   '/expert': typeof ExpertRoute
   '/freeze-frame': typeof FreezeFrameRoute
   '/garage': typeof GarageRoute
@@ -106,6 +115,7 @@ export interface FileRouteTypes {
     | '/adapters'
     | '/canbus'
     | '/codes'
+    | '/deep-scan'
     | '/expert'
     | '/freeze-frame'
     | '/garage'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/adapters'
     | '/canbus'
     | '/codes'
+    | '/deep-scan'
     | '/expert'
     | '/freeze-frame'
     | '/garage'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/adapters'
     | '/canbus'
     | '/codes'
+    | '/deep-scan'
     | '/expert'
     | '/freeze-frame'
     | '/garage'
@@ -140,6 +152,7 @@ export interface RootRouteChildren {
   AdaptersRoute: typeof AdaptersRoute
   CanbusRoute: typeof CanbusRoute
   CodesRoute: typeof CodesRoute
+  DeepScanRoute: typeof DeepScanRoute
   ExpertRoute: typeof ExpertRoute
   FreezeFrameRoute: typeof FreezeFrameRoute
   GarageRoute: typeof GarageRoute
@@ -175,6 +188,13 @@ declare module '@tanstack/react-router' {
       path: '/codes'
       fullPath: '/codes'
       preLoaderRoute: typeof CodesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/deep-scan': {
+      id: '/deep-scan'
+      path: '/deep-scan'
+      fullPath: '/deep-scan'
+      preLoaderRoute: typeof DeepScanRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/expert': {
@@ -220,6 +240,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdaptersRoute: AdaptersRoute,
   CanbusRoute: CanbusRoute,
   CodesRoute: CodesRoute,
+  DeepScanRoute: DeepScanRoute,
   ExpertRoute: ExpertRoute,
   FreezeFrameRoute: FreezeFrameRoute,
   GarageRoute: GarageRoute,
