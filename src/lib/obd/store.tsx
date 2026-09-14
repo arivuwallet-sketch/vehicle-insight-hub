@@ -146,6 +146,10 @@ interface ObdContextValue {
   sessions: SessionRecord[];
   saveSession: (notes?: string) => void;
   deleteSession: (id: string) => void;
+  codeHistory: CodeHistoryEntry[];
+  vehicleSessions: (vehicleId: string) => SessionRecord[];
+  vehicleCodeHistory: (vehicleId: string) => CodeHistoryEntry[];
+  clearVehicleHistory: (vehicleId: string) => void;
 }
 
 const Ctx = createContext<ObdContextValue | null>(null);
@@ -153,6 +157,7 @@ const Ctx = createContext<ObdContextValue | null>(null);
 const LS_VEHICLES = "obd.vehicles";
 const LS_SESSIONS = "obd.sessions";
 const LS_ACTIVE = "obd.activeVehicle";
+const LS_CODE_HISTORY = "obd.codeHistory";
 const MAX_POINTS = 240;
 
 function loadLS<T>(key: string, fallback: T): T {
