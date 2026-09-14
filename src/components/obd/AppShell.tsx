@@ -9,6 +9,7 @@ import {
   History,
   Keyboard,
   Network,
+  Radar,
   Terminal,
   Usb,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
 const NAV = [
   { to: "/", label: "Dashboard", icon: GaugeIcon },
   { to: "/codes", label: "Fault Codes", icon: AlertTriangle },
+  { to: "/deep-scan", label: "Deep Scan", icon: Radar },
   { to: "/freeze-frame", label: "Freeze Frame", icon: Camera },
   { to: "/vehicle", label: "Vehicle Info", icon: Cpu },
   { to: "/canbus", label: "CAN Bus", icon: Network },
