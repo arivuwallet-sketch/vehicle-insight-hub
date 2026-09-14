@@ -9,6 +9,7 @@ import {
   History,
   Keyboard,
   Network,
+  Radar,
   Terminal,
   Usb,
 } from "lucide-react";
