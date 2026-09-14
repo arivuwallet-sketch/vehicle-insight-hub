@@ -60,10 +60,10 @@ export interface Vehicle {
   odometer: string;
   notes: string;
   /** Official record fields decoded from the VIN database */
-  engine?: string;
-  fuel?: string;
-  trim?: string;
-  vinVerified?: boolean;
+  engine?: string | undefined;
+  fuel?: string | undefined;
+  trim?: string | undefined;
+  vinVerified?: boolean | undefined;
 }
 
 export interface SessionRecord {
