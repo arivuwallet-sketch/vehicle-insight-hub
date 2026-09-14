@@ -654,8 +654,9 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       description: "Monitors are now 'not ready'. Drive a full cycle before an emissions test.",
     });
     setFreeze(null);
+    markHistoryCleared();
     await scanDtcs();
-  }, [elm, scanDtcs]);
+  }, [elm, scanDtcs, markHistoryCleared]);
 
   const sendRaw = useCallback((cmd: string) => elm.send(cmd.trim().toUpperCase(), 10000), [elm]);
 
