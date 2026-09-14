@@ -361,39 +361,6 @@ const DB: Record<string, RawEntry> = {
       "If soot mass is above the safe forced-regen limit, the filter needs off-car cleaning or replacement.",
     ],
   },
-  P2096: {
-    t: "Post-Catalyst Fuel Trim System Too Lean (Bank 1)",
-    s: "moderate",
-    m: "The downstream oxygen sensor reports a lean mixture after the catalyst that the ECU cannot trim out.",
-    c: ["Small exhaust leak before or near the rear sensor", "Contaminated rear O2 sensor", "Failing catalyst", "Genuine lean running from a vacuum leak"],
-    r: [
-      "Pressurise or smoke-test the exhaust from the manifold back to find leaks.",
-      "Compare front and rear sensor traces at steady cruise.",
-      "Check short and long term fuel trims at idle and 2500 rpm before replacing parts.",
-    ],
-  },
-  P2187: {
-    t: "System Too Lean at Idle (Bank 1)",
-    s: "moderate",
-    m: "At idle the engine needs far more fuel than expected, so unmetered air is getting in or fuel delivery is short.",
-    c: ["Vacuum hose or intake gasket leak", "Dirty MAF sensor", "Weak fuel pump or blocked filter", "Leaking PCV system"],
-    r: [
-      "Smoke-test the intake with the engine off.",
-      "Watch long term fuel trim: a leak shows a large positive trim at idle that shrinks under load.",
-      "Check fuel pressure and MAF grams-per-second against specification.",
-    ],
-  },
-  P0401: {
-    t: "Exhaust Gas Recirculation Flow Insufficient",
-    s: "moderate",
-    m: "The ECU opened the EGR valve but did not see the expected drop in intake pressure or rise in intake temperature.",
-    c: ["Carbon-blocked EGR passages or cooler", "Stuck EGR valve", "Faulty DPFE or MAP sensor", "Split vacuum line on older systems"],
-    r: [
-      "Command the EGR valve open with the engine idling and watch for an rpm drop.",
-      "Remove and inspect the valve and ports for carbon build-up.",
-      "Verify the EGR position feedback tracks the command in live data.",
-    ],
-  },
   P0299: {
     t: "Turbocharger / Supercharger Underboost",
     s: "serious",
@@ -403,28 +370,6 @@ const DB: Record<string, RawEntry> = {
       "Compare requested against actual boost in live data during a road test.",
       "Pressure-test the charge pipework for leaks.",
       "Check vane or wastegate actuator travel with the actuator commanded through its range.",
-    ],
-  },
-  P0171: {
-    t: "System Too Lean (Bank 1)",
-    s: "moderate",
-    m: "Long term fuel trim has hit its positive limit — the engine is running lean and the ECU has run out of correction.",
-    c: ["Vacuum or intake manifold leak", "Dirty or failing MAF sensor", "Low fuel pressure or clogged injectors", "Leaking PCV or brake booster hose"],
-    r: [
-      "Smoke-test the intake system.",
-      "Read fuel trims at idle, 2000 rpm and under load — a leak improves as load rises, fuel supply problems get worse.",
-      "Check fuel pressure under load and clean or test the injectors.",
-    ],
-  },
-  P0172: {
-    t: "System Too Rich (Bank 1)",
-    s: "moderate",
-    m: "Long term fuel trim is strongly negative — the ECU is pulling fuel out to compensate for a rich mixture.",
-    c: ["Leaking injector", "High fuel pressure / failed regulator", "Contaminated MAF sensor reading high", "Restricted air filter", "Faulty coolant temperature sensor"],
-    r: [
-      "Check fuel pressure and look for a soaked fuel pressure regulator vacuum hose.",
-      "Compare MAF grams-per-second against the expected value for engine size at idle.",
-      "Inspect spark plugs: uniformly sooty plugs confirm a whole-bank rich condition.",
     ],
   },
 };
