@@ -230,16 +230,24 @@ export function ObdProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicleId, setActiveVehicleIdState] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [codeHistory, setCodeHistory] = useState<CodeHistoryEntry[]>([]);
   const sessionStart = useRef<number>(Date.now());
   const sampleCount = useRef(0);
   const maxima = useRef<Partial<Record<PidId, number>>>({});
+  const codeHistoryRef = useRef<CodeHistoryEntry[]>([]);
+  const activeVehicleRef = useRef<string | null>(null);
 
   useEffect(() => {
     setSupportedSerial(serialSupported());
     setSupportedBluetooth(bluetoothSupported());
     setVehicles(loadLS<Vehicle[]>(LS_VEHICLES, []));
     setSessions(loadLS<SessionRecord[]>(LS_SESSIONS, []));
-    setActiveVehicleIdState(loadLS<string | null>(LS_ACTIVE, null));
+    const savedActive = loadLS<string | null>(LS_ACTIVE, null);
+    setActiveVehicleIdState(savedActive);
+    activeVehicleRef.current = savedActive;
+    const hist = loadLS<CodeHistoryEntry[]>(LS_CODE_HISTORY, []);
+    setCodeHistory(hist);
+    codeHistoryRef.current = hist;
   }, []);
 
   useEffect(() => {
@@ -257,10 +265,60 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     setSessions(s);
     window.localStorage.setItem(LS_SESSIONS, JSON.stringify(s));
   };
+  const persistCodeHistory = (h: CodeHistoryEntry[]) => {
+    codeHistoryRef.current = h;
+    setCodeHistory(h);
+    window.localStorage.setItem(LS_CODE_HISTORY, JSON.stringify(h));
+  };
   const setActiveVehicleId = (id: string | null) => {
+    activeVehicleRef.current = id;
     setActiveVehicleIdState(id);
     window.localStorage.setItem(LS_ACTIVE, JSON.stringify(id));
   };
+
+  /** File the codes just read from the bus against the selected garage vehicle. */
+  const recordCodesForVehicle = useCallback(
+    (found: { code: string; kind: CodeHistoryEntry["kind"] }[]) => {
+      const vehicleId = activeVehicleRef.current;
+      if (!vehicleId || found.length === 0) return;
+      const now = Date.now();
+      const next = [...codeHistoryRef.current];
+      for (const { code, kind } of found) {
+        const i = next.findIndex(
+          (e) => e.vehicleId === vehicleId && e.code === code && e.kind === kind && !e.clearedAt,
+        );
+        const existing = i >= 0 ? next[i] : undefined;
+        if (existing) {
+          next[i] = { ...existing, lastSeen: now, count: existing.count + 1 };
+        } else {
+          next.unshift({
+            id: uid(),
+            vehicleId,
+            code,
+            kind,
+            firstSeen: now,
+            lastSeen: now,
+            count: 1,
+            clearedAt: null,
+          });
+        }
+      }
+      persistCodeHistory(next);
+    },
+    [],
+  );
+
+  /** Mark this vehicle's open code history as cleared when Mode 04 succeeds. */
+  const markHistoryCleared = useCallback(() => {
+    const vehicleId = activeVehicleRef.current;
+    if (!vehicleId) return;
+    const now = Date.now();
+    persistCodeHistory(
+      codeHistoryRef.current.map((e) =>
+        e.vehicleId === vehicleId && !e.clearedAt ? { ...e, clearedAt: now } : e,
+      ),
+    );
+  }, []);
 
   /* ---------------- connection ---------------- */
 
