@@ -87,14 +87,34 @@ function SessionsPage() {
         </div>
       </header>
 
-      {sessions.length === 0 ? (
+      {car && carHistory.length > 0 && (
+        <section className="rounded-lg border border-border bg-card p-5">
+          <h2 className="font-display text-sm font-semibold tracking-wide">Fault code history</h2>
+          <ul className="mt-2 divide-y divide-border/60">
+            {carHistory.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-baseline gap-2 py-1.5 text-sm">
+                <span className="readout font-semibold text-signal">{e.code}</span>
+                <span className="text-muted-foreground">{lookupDtc(e.code).title}</span>
+                <span className="readout ml-auto text-xs text-muted-foreground">
+                  {e.kind} · seen {e.count}× · last {fmt(e.lastSeen)}
+                  {e.clearedAt ? ` · cleared ${fmt(e.clearedAt)}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {shown.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
           <History className="mx-auto mb-3 size-8 opacity-50" />
-          No saved sessions yet. Connect an adapter and press Save current (or G).
+          {car
+            ? "No sessions saved for this vehicle yet. Select it in the Garage, then save a scan."
+            : "No saved sessions yet. Connect an adapter and press Save current (or G)."}
         </div>
       ) : (
         <div className="space-y-4">
-          {sessions.map((s) => {
+          {shown.map((s) => {
             const open = openId === s.id;
             const mins = Math.max(1, Math.round((s.endedAt - s.startedAt) / 60000));
             return (
