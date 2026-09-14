@@ -1,3 +1,5 @@
+import { familyLookup } from "./dtc-families";
+
 export type Severity = "critical" | "serious" | "moderate" | "minor";
 
 export interface DtcInfo {
@@ -7,6 +9,7 @@ export interface DtcInfo {
   severity: Severity;
   meaning: string;
   causes: string[];
+  repair: string[];
 }
 
 interface RawEntry {
@@ -14,6 +17,7 @@ interface RawEntry {
   s: Severity;
   m: string;
   c: string[];
+  r?: string[];
 }
 
 /**
