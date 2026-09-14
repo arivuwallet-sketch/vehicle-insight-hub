@@ -337,7 +337,98 @@ const DB: Record<string, RawEntry> = {
     m: "The instrument cluster is not communicating with the rest of the network.",
     c: ["Cluster power/ground fault", "CAN wiring", "Failed cluster"],
   },
+  P2002: {
+    t: "Diesel Particulate Filter Efficiency Below Threshold (Bank 1)",
+    s: "serious",
+    m: "The pressure and temperature sensors say the DPF is no longer trapping and burning soot properly.",
+    c: ["Soot-loaded or cracked DPF", "Failed differential pressure sensor or blocked hoses", "Repeated interrupted regenerations from short trips", "Injector or EGR fault feeding extra soot"],
+    r: [
+      "Read DPF soot mass, ash mass, differential pressure and distance since last regeneration in live data.",
+      "Check the pressure sensor hoses for soot blockage or splits before condemning the filter.",
+      "Run a forced regeneration if soot loading allows, then drive a motorway cycle and recheck.",
+      "Fix any upstream cause (EGR, injectors, turbo) or the new filter will block again.",
+    ],
+  },
+  P2463: {
+    t: "Diesel Particulate Filter — Soot Accumulation",
+    s: "serious",
+    m: "Soot in the particulate filter has passed the allowed limit, usually because regenerations keep failing or being cut short.",
+    c: ["Mostly short, low-speed journeys", "Failed or interrupted regeneration", "Faulty differential pressure or exhaust temperature sensor", "Leaking injector or stuck EGR valve"],
+    r: [
+      "Check soot mass and regeneration history in live data.",
+      "Verify exhaust temperature sensors read plausibly and match each other cold.",
+      "Attempt a forced regeneration, or drive at steady motorway speed for 20 minutes if the car allows it.",
+      "If soot mass is above the safe forced-regen limit, the filter needs off-car cleaning or replacement.",
+    ],
+  },
+  P2096: {
+    t: "Post-Catalyst Fuel Trim System Too Lean (Bank 1)",
+    s: "moderate",
+    m: "The downstream oxygen sensor reports a lean mixture after the catalyst that the ECU cannot trim out.",
+    c: ["Small exhaust leak before or near the rear sensor", "Contaminated rear O2 sensor", "Failing catalyst", "Genuine lean running from a vacuum leak"],
+    r: [
+      "Pressurise or smoke-test the exhaust from the manifold back to find leaks.",
+      "Compare front and rear sensor traces at steady cruise.",
+      "Check short and long term fuel trims at idle and 2500 rpm before replacing parts.",
+    ],
+  },
+  P2187: {
+    t: "System Too Lean at Idle (Bank 1)",
+    s: "moderate",
+    m: "At idle the engine needs far more fuel than expected, so unmetered air is getting in or fuel delivery is short.",
+    c: ["Vacuum hose or intake gasket leak", "Dirty MAF sensor", "Weak fuel pump or blocked filter", "Leaking PCV system"],
+    r: [
+      "Smoke-test the intake with the engine off.",
+      "Watch long term fuel trim: a leak shows a large positive trim at idle that shrinks under load.",
+      "Check fuel pressure and MAF grams-per-second against specification.",
+    ],
+  },
+  P0401: {
+    t: "Exhaust Gas Recirculation Flow Insufficient",
+    s: "moderate",
+    m: "The ECU opened the EGR valve but did not see the expected drop in intake pressure or rise in intake temperature.",
+    c: ["Carbon-blocked EGR passages or cooler", "Stuck EGR valve", "Faulty DPFE or MAP sensor", "Split vacuum line on older systems"],
+    r: [
+      "Command the EGR valve open with the engine idling and watch for an rpm drop.",
+      "Remove and inspect the valve and ports for carbon build-up.",
+      "Verify the EGR position feedback tracks the command in live data.",
+    ],
+  },
+  P0299: {
+    t: "Turbocharger / Supercharger Underboost",
+    s: "serious",
+    m: "Actual boost pressure stayed below the ECU's target, so the engine will feel flat and may go into limp mode.",
+    c: ["Split or loose boost hose / intercooler pipe", "Sticking variable-vane mechanism or wastegate", "Faulty boost pressure sensor", "Blocked DPF or air filter", "Worn turbo"],
+    r: [
+      "Compare requested against actual boost in live data during a road test.",
+      "Pressure-test the charge pipework for leaks.",
+      "Check vane or wastegate actuator travel with the actuator commanded through its range.",
+    ],
+  },
+  P0171: {
+    t: "System Too Lean (Bank 1)",
+    s: "moderate",
+    m: "Long term fuel trim has hit its positive limit — the engine is running lean and the ECU has run out of correction.",
+    c: ["Vacuum or intake manifold leak", "Dirty or failing MAF sensor", "Low fuel pressure or clogged injectors", "Leaking PCV or brake booster hose"],
+    r: [
+      "Smoke-test the intake system.",
+      "Read fuel trims at idle, 2000 rpm and under load — a leak improves as load rises, fuel supply problems get worse.",
+      "Check fuel pressure under load and clean or test the injectors.",
+    ],
+  },
+  P0172: {
+    t: "System Too Rich (Bank 1)",
+    s: "moderate",
+    m: "Long term fuel trim is strongly negative — the ECU is pulling fuel out to compensate for a rich mixture.",
+    c: ["Leaking injector", "High fuel pressure / failed regulator", "Contaminated MAF sensor reading high", "Restricted air filter", "Faulty coolant temperature sensor"],
+    r: [
+      "Check fuel pressure and look for a soaked fuel pressure regulator vacuum hose.",
+      "Compare MAF grams-per-second against the expected value for engine size at idle.",
+      "Inspect spark plugs: uniformly sooty plugs confirm a whole-bank rich condition.",
+    ],
+  },
 };
+
 
 const SYSTEM_BY_LETTER: Record<string, DtcInfo["system"]> = {
   P: "Powertrain",
