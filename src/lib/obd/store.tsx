@@ -722,7 +722,11 @@ export function ObdProvider({ children }: { children: ReactNode }) {
         notes,
       };
       persistSessions([rec, ...sessions]);
-      toast.success("Session saved to history");
+      toast.success(
+        vehicle
+          ? `Session saved to ${rec.vehicleLabel}`
+          : "Session saved — select a car in the Garage to file it against that vehicle",
+      );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeVehicleId, adapterName, dtcs, pendingDtcs, protocolName, sessions, vehicles, vin],
@@ -735,8 +739,22 @@ export function ObdProvider({ children }: { children: ReactNode }) {
   };
   const deleteVehicle = (id: string) => {
     persistVehicles(vehicles.filter((v) => v.id !== id));
+    persistSessions(sessions.filter((s) => s.vehicleId !== id));
+    persistCodeHistory(codeHistoryRef.current.filter((e) => e.vehicleId !== id));
     if (activeVehicleId === id) setActiveVehicleId(null);
   };
+
+  const vehicleSessions = useCallback(
+    (vehicleId: string) => sessions.filter((s) => s.vehicleId === vehicleId),
+    [sessions],
+  );
+  const vehicleCodeHistory = useCallback(
+    (vehicleId: string) =>
+      codeHistory.filter((e) => e.vehicleId === vehicleId).sort((a, b) => b.lastSeen - a.lastSeen),
+    [codeHistory],
+  );
+  const clearVehicleHistory = (vehicleId: string) =>
+    persistCodeHistory(codeHistoryRef.current.filter((e) => e.vehicleId !== vehicleId));
 
   const value: ObdContextValue = useMemo(
     () => ({
