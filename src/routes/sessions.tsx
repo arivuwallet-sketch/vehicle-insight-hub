@@ -34,18 +34,36 @@ function fmt(ts: number) {
 }
 
 function SessionsPage() {
-  const { sessions, saveSession, deleteSession, state } = useObd();
+  const { sessions, saveSession, deleteSession, state, vehicles, vehicleCodeHistory } = useObd();
+  const { vehicle: vehicleFilter } = Route.useSearch();
+  const navigate = Route.useNavigate();
   const [notes, setNotes] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
+
+  const car = vehicleFilter ? vehicles.find((v) => v.id === vehicleFilter) : undefined;
+  const shown = vehicleFilter ? sessions.filter((s) => s.vehicleId === vehicleFilter) : sessions;
+  const carHistory = vehicleFilter ? vehicleCodeHistory(vehicleFilter) : [];
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <header className="no-print flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-wide">Sessions</h1>
+          <h1 className="font-display text-2xl font-bold tracking-wide">
+            {car ? `${car.nickname || `${car.make} ${car.model}`.trim()} history` : "Sessions"}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Snapshot the current scan, then print any session as a PDF report.
+            {car
+              ? "Sessions and fault codes filed against this vehicle only."
+              : "Snapshot the current scan, then print any session as a PDF report."}
           </p>
+          {car && (
+            <button
+              className="mt-1 text-xs uppercase tracking-wider text-signal"
+              onClick={() => void navigate({ search: { vehicle: undefined } })}
+            >
+              Show all vehicles
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
           <Input
