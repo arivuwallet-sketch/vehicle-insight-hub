@@ -365,25 +365,6 @@ export const MAKE_PROFILES: MakeProfile[] = [
     ],
   },
   {
-    id: "nissan",
-    make: "Nissan / Infiniti",
-    aliases: ["nissan", "infiniti", "datsun"],
-    header: "7E0",
-    headerNote: "Engine ECU at 7E0. Nissan Consult routines map onto UDS service 31 on later cars.",
-    tests: [
-      ...UNIVERSAL_TESTS,
-      ...COMMON_ACTUATIONS({ fan: "7001", fuelPump: "7002" }),
-      {
-        id: "nissan-throttle",
-        name: "Throttle valve closed position learn",
-        description: "Runs the Nissan accelerator and throttle closed-position learn after cleaning.",
-        risk: "caution",
-        precondition: "Engine warm, accelerator released, all loads off.",
-        steps: [DEFAULT_SESSION, routine("0601", "throttle closed position learn"), BACK_TO_DEFAULT],
-      },
-    ],
-  },
-  {
     id: "hyundai",
     make: "Hyundai / Kia",
     aliases: ["hyundai", "kia", "genesis"],
