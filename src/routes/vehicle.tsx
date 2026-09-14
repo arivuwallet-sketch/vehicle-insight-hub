@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { AlertTriangle, BadgeCheck, Cpu, Database, LoaderCircle, Printer, RefreshCw } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Cpu, Database, LoaderCircle, Printer, RefreshCw, Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
-import { useObd } from "@/lib/obd/store";
+import { useObd, uid, type Vehicle } from "@/lib/obd/store";
 import { decodeVin } from "@/lib/obd/vin";
 import { lookupVinDatabase } from "@/lib/obd/vin.functions";
 
