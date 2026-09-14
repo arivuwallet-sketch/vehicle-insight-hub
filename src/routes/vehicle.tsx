@@ -200,12 +200,26 @@ function VehiclePage() {
                 Decoded live from the United States Department of Transportation vPIC database.
               </p>
             </div>
-            {official && !official.warning && (
-              <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
-                <BadgeCheck className="size-4" /> VIN matched
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {official && !official.warning && (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
+                  <BadgeCheck className="size-4" /> VIN matched
+                </span>
+              )}
+              {official?.make && (
+                <Button size="sm" className="no-print" onClick={saveOfficialToGarage}>
+                  <Save className="size-4" />
+                  {targetVehicle ? "Update car in garage" : "Save to garage"}
+                </Button>
+              )}
+            </div>
           </div>
+          {official?.make && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              Saving sets this car's official make, model, year and engine, so actuation tests and
+              code severity match the real vehicle.
+            </p>
+          )}
 
           {databaseQuery.isPending ? (
             <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted-foreground">
