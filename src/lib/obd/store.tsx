@@ -77,6 +77,17 @@ export interface SessionRecord {
   notes: string;
 }
 
+export interface CodeHistoryEntry {
+  id: string;
+  vehicleId: string;
+  code: string;
+  kind: "stored" | "pending" | "permanent";
+  firstSeen: number;
+  lastSeen: number;
+  count: number;
+  clearedAt: number | null;
+}
+
 interface FreezeFrame {
   dtc: string | null;
   values: { label: string; value: string }[];
@@ -135,6 +146,10 @@ interface ObdContextValue {
   sessions: SessionRecord[];
   saveSession: (notes?: string) => void;
   deleteSession: (id: string) => void;
+  codeHistory: CodeHistoryEntry[];
+  vehicleSessions: (vehicleId: string) => SessionRecord[];
+  vehicleCodeHistory: (vehicleId: string) => CodeHistoryEntry[];
+  clearVehicleHistory: (vehicleId: string) => void;
 }
 
 const Ctx = createContext<ObdContextValue | null>(null);
@@ -142,6 +157,7 @@ const Ctx = createContext<ObdContextValue | null>(null);
 const LS_VEHICLES = "obd.vehicles";
 const LS_SESSIONS = "obd.sessions";
 const LS_ACTIVE = "obd.activeVehicle";
+const LS_CODE_HISTORY = "obd.codeHistory";
 const MAX_POINTS = 240;
 
 function loadLS<T>(key: string, fallback: T): T {
@@ -214,16 +230,24 @@ export function ObdProvider({ children }: { children: ReactNode }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [activeVehicleId, setActiveVehicleIdState] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionRecord[]>([]);
+  const [codeHistory, setCodeHistory] = useState<CodeHistoryEntry[]>([]);
   const sessionStart = useRef<number>(Date.now());
   const sampleCount = useRef(0);
   const maxima = useRef<Partial<Record<PidId, number>>>({});
+  const codeHistoryRef = useRef<CodeHistoryEntry[]>([]);
+  const activeVehicleRef = useRef<string | null>(null);
 
   useEffect(() => {
     setSupportedSerial(serialSupported());
     setSupportedBluetooth(bluetoothSupported());
     setVehicles(loadLS<Vehicle[]>(LS_VEHICLES, []));
     setSessions(loadLS<SessionRecord[]>(LS_SESSIONS, []));
-    setActiveVehicleIdState(loadLS<string | null>(LS_ACTIVE, null));
+    const savedActive = loadLS<string | null>(LS_ACTIVE, null);
+    setActiveVehicleIdState(savedActive);
+    activeVehicleRef.current = savedActive;
+    const hist = loadLS<CodeHistoryEntry[]>(LS_CODE_HISTORY, []);
+    setCodeHistory(hist);
+    codeHistoryRef.current = hist;
   }, []);
 
   useEffect(() => {
@@ -241,10 +265,60 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     setSessions(s);
     window.localStorage.setItem(LS_SESSIONS, JSON.stringify(s));
   };
+  const persistCodeHistory = (h: CodeHistoryEntry[]) => {
+    codeHistoryRef.current = h;
+    setCodeHistory(h);
+    window.localStorage.setItem(LS_CODE_HISTORY, JSON.stringify(h));
+  };
   const setActiveVehicleId = (id: string | null) => {
+    activeVehicleRef.current = id;
     setActiveVehicleIdState(id);
     window.localStorage.setItem(LS_ACTIVE, JSON.stringify(id));
   };
+
+  /** File the codes just read from the bus against the selected garage vehicle. */
+  const recordCodesForVehicle = useCallback(
+    (found: { code: string; kind: CodeHistoryEntry["kind"] }[]) => {
+      const vehicleId = activeVehicleRef.current;
+      if (!vehicleId || found.length === 0) return;
+      const now = Date.now();
+      const next = [...codeHistoryRef.current];
+      for (const { code, kind } of found) {
+        const i = next.findIndex(
+          (e) => e.vehicleId === vehicleId && e.code === code && e.kind === kind && !e.clearedAt,
+        );
+        const existing = i >= 0 ? next[i] : undefined;
+        if (existing) {
+          next[i] = { ...existing, lastSeen: now, count: existing.count + 1 };
+        } else {
+          next.unshift({
+            id: uid(),
+            vehicleId,
+            code,
+            kind,
+            firstSeen: now,
+            lastSeen: now,
+            count: 1,
+            clearedAt: null,
+          });
+        }
+      }
+      persistCodeHistory(next);
+    },
+    [],
+  );
+
+  /** Mark this vehicle's open code history as cleared when Mode 04 succeeds. */
+  const markHistoryCleared = useCallback(() => {
+    const vehicleId = activeVehicleRef.current;
+    if (!vehicleId) return;
+    const now = Date.now();
+    persistCodeHistory(
+      codeHistoryRef.current.map((e) =>
+        e.vehicleId === vehicleId && !e.clearedAt ? { ...e, clearedAt: now } : e,
+      ),
+    );
+  }, []);
 
   /* ---------------- connection ---------------- */
 
@@ -285,14 +359,19 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
   const scanDtcs = useCallback(async () => {
     if (!elm.connected) return;
-    const stored = await elm.send("03", 8000);
-    setDtcs(parseDtcResponse(stored, 3));
-    const pend = await elm.send("07", 8000);
-    setPendingDtcs(parseDtcResponse(pend, 7));
-    const perm = await elm.send("0A", 8000);
-    setPermanentDtcs(parseDtcResponse(perm, 0x0a));
+    const stored = parseDtcResponse(await elm.send("03", 8000), 3);
+    setDtcs(stored);
+    const pending = parseDtcResponse(await elm.send("07", 8000), 7);
+    setPendingDtcs(pending);
+    const permanent = parseDtcResponse(await elm.send("0A", 8000), 0x0a);
+    setPermanentDtcs(permanent);
+    recordCodesForVehicle([
+      ...stored.map((code) => ({ code, kind: "stored" as const })),
+      ...pending.map((code) => ({ code, kind: "pending" as const })),
+      ...permanent.map((code) => ({ code, kind: "permanent" as const })),
+    ]);
     await readStatus();
-  }, [elm, readStatus]);
+  }, [elm, readStatus, recordCodesForVehicle]);
 
   const readVehicleInfo = useCallback(async () => {
     if (!elm.connected) return;
@@ -575,8 +654,9 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       description: "Monitors are now 'not ready'. Drive a full cycle before an emissions test.",
     });
     setFreeze(null);
+    markHistoryCleared();
     await scanDtcs();
-  }, [elm, scanDtcs]);
+  }, [elm, scanDtcs, markHistoryCleared]);
 
   const sendRaw = useCallback((cmd: string) => elm.send(cmd.trim().toUpperCase(), 10000), [elm]);
 
@@ -642,7 +722,11 @@ export function ObdProvider({ children }: { children: ReactNode }) {
         notes,
       };
       persistSessions([rec, ...sessions]);
-      toast.success("Session saved to history");
+      toast.success(
+        vehicle
+          ? `Session saved to ${rec.vehicleLabel}`
+          : "Session saved — select a car in the Garage to file it against that vehicle",
+      );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [activeVehicleId, adapterName, dtcs, pendingDtcs, protocolName, sessions, vehicles, vin],
@@ -655,8 +739,22 @@ export function ObdProvider({ children }: { children: ReactNode }) {
   };
   const deleteVehicle = (id: string) => {
     persistVehicles(vehicles.filter((v) => v.id !== id));
+    persistSessions(sessions.filter((s) => s.vehicleId !== id));
+    persistCodeHistory(codeHistoryRef.current.filter((e) => e.vehicleId !== id));
     if (activeVehicleId === id) setActiveVehicleId(null);
   };
+
+  const vehicleSessions = useCallback(
+    (vehicleId: string) => sessions.filter((s) => s.vehicleId === vehicleId),
+    [sessions],
+  );
+  const vehicleCodeHistory = useCallback(
+    (vehicleId: string) =>
+      codeHistory.filter((e) => e.vehicleId === vehicleId).sort((a, b) => b.lastSeen - a.lastSeen),
+    [codeHistory],
+  );
+  const clearVehicleHistory = (vehicleId: string) =>
+    persistCodeHistory(codeHistoryRef.current.filter((e) => e.vehicleId !== vehicleId));
 
   const value: ObdContextValue = useMemo(
     () => ({
@@ -712,6 +810,10 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       sessions,
       saveSession,
       deleteSession,
+      codeHistory,
+      vehicleSessions,
+      vehicleCodeHistory,
+      clearVehicleHistory,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -723,6 +825,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       readVehicleInfo, sendRaw, saveSession,
       ecus, readiness, readinessCycle, monitorTests, ipt, mode09,
       deepScanning, deepStep, lastDeepScan, deepScan,
+      codeHistory, vehicleSessions, vehicleCodeHistory,
     ],
   );
 

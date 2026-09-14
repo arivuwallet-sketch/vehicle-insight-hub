@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Car, Check, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useObd, uid, type Vehicle } from "@/lib/obd/store";
 import { decodeVin } from "@/lib/obd/vin";
+import { lookupDtc } from "@/lib/obd/dtc";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/garage")({
@@ -47,8 +48,17 @@ const empty = (): Vehicle => ({
 });
 
 function GaragePage() {
-  const { vehicles, saveVehicle, deleteVehicle, activeVehicleId, setActiveVehicleId, vin, sessions } =
-    useObd();
+  const {
+    vehicles,
+    saveVehicle,
+    deleteVehicle,
+    activeVehicleId,
+    setActiveVehicleId,
+    vin,
+    sessions,
+    vehicleCodeHistory,
+    clearVehicleHistory,
+  } = useObd();
   const [draft, setDraft] = useState<Vehicle | null>(null);
 
   const set = (k: keyof Vehicle, v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d));
@@ -88,6 +98,7 @@ function GaragePage() {
             const active = v.id === activeVehicleId;
             const decoded = v.vin ? decodeVin(v.vin) : null;
             const count = sessions.filter((s) => s.vehicleId === v.id).length;
+            const history = vehicleCodeHistory(v.id);
             return (
               <div
                 key={v.id}
@@ -122,12 +133,52 @@ function GaragePage() {
                     </div>
                   )}
                   <div>
-                    {count} saved session{count === 1 ? "" : "s"}
+                    {count} saved session{count === 1 ? "" : "s"} · {history.length} fault code
+                    {history.length === 1 ? "" : "s"} on record
                   </div>
                 </dl>
                 {v.notes && <p className="mt-2 text-xs text-muted-foreground">{v.notes}</p>}
 
-                <div className="mt-4 flex gap-2">
+                {history.length > 0 && (
+                  <div className="mt-3 rounded border border-border/70 bg-background/40 p-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                        Code history
+                      </span>
+                      <button
+                        className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-danger"
+                        onClick={() => clearVehicleHistory(v.id)}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <ul className="mt-1 space-y-1">
+                      {history.slice(0, 5).map((e) => (
+                        <li key={e.id} className="flex items-baseline gap-2 text-xs">
+                          <span className="readout font-semibold text-signal">{e.code}</span>
+                          <span className="truncate text-muted-foreground">
+                            {lookupDtc(e.code).title}
+                          </span>
+                          <span
+                            className={cn(
+                              "ml-auto shrink-0 text-[10px] uppercase tracking-wider",
+                              e.clearedAt ? "text-muted-foreground" : "text-warn",
+                            )}
+                          >
+                            {e.clearedAt ? "cleared" : e.kind}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {history.length > 5 && (
+                      <div className="mt-1 text-[10px] text-muted-foreground">
+                        +{history.length - 5} more
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                <div className="mt-4 flex flex-wrap gap-2">
                   <Button
                     size="sm"
                     variant={active ? "secondary" : "default"}
@@ -137,6 +188,11 @@ function GaragePage() {
                   </Button>
                   <Button size="sm" variant="ghost" onClick={() => setDraft(v)}>
                     Edit
+                  </Button>
+                  <Button size="sm" variant="ghost" asChild>
+                    <Link to="/sessions" search={{ vehicle: v.id }}>
+                      History
+                    </Link>
                   </Button>
                   <Button
                     size="sm"
