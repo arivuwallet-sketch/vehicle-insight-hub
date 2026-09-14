@@ -12,6 +12,7 @@ import {
   Radar,
   Terminal,
   Usb,
+  Wrench,
 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
