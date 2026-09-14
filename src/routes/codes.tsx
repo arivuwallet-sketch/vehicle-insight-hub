@@ -56,15 +56,27 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
       </div>
       <h3 className="mt-2 text-base font-semibold">{info.title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{info.meaning}</p>
-      <div className="mt-3">
-        <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Likely causes
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Likely causes
+          </div>
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
+            {info.causes.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
         </div>
-        <ul className="mt-1 list-disc space-y-1 pl-5 text-sm">
-          {info.causes.map((c) => (
-            <li key={c}>{c}</li>
-          ))}
-        </ul>
+        <div>
+          <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Repair steps
+          </div>
+          <ol className="mt-1 list-decimal space-y-1 pl-5 text-sm">
+            {info.repair.map((r) => (
+              <li key={r}>{r}</li>
+            ))}
+          </ol>
+        </div>
       </div>
     </article>
   );
