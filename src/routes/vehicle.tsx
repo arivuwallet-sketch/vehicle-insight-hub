@@ -79,6 +79,47 @@ function VehiclePage() {
         .join(" · ") || "Unavailable"
     : "Unavailable";
 
+  const matchByVin = vehicles.find((v) => v.vin && v.vin.toUpperCase() === decoded?.vin);
+  const activeVehicle = vehicles.find((v) => v.id === activeVehicleId);
+  const targetVehicle = matchByVin ?? activeVehicle ?? null;
+
+  const saveOfficialToGarage = () => {
+    if (!official || !decoded?.vin) return;
+    const base: Vehicle =
+      targetVehicle ??
+      ({
+        id: uid(),
+        nickname: "",
+        make: "",
+        model: "",
+        year: "",
+        vin: "",
+        plate: "",
+        odometer: "",
+        notes: "",
+      } satisfies Vehicle);
+    const updated: Vehicle = {
+      ...base,
+      vin: decoded.vin,
+      make: official.make ?? base.make,
+      model: official.model ?? base.model,
+      year: official.modelYear ?? base.year,
+      trim: [official.trim, official.series].filter(Boolean).join(" · ") || base.trim,
+      engine: engineDescription === "Unavailable" ? base.engine : engineDescription,
+      fuel: official.fuelType ?? base.fuel,
+      nickname: base.nickname || [official.modelYear, official.make, official.model].filter(Boolean).join(" "),
+      vinVerified: true,
+    };
+    saveVehicle(updated);
+    setActiveVehicleId(updated.id);
+    toast.success(
+      targetVehicle
+        ? `Updated ${updated.nickname || updated.make} in your garage`
+        : `Added ${updated.nickname || updated.make} to your garage`,
+    );
+  };
+
+
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
