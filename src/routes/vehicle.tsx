@@ -41,7 +41,19 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function VehiclePage() {
-  const { vin, calId, ecuName, protocolName, adapterName, readVehicleInfo, state } = useObd();
+  const {
+    vin,
+    calId,
+    ecuName,
+    protocolName,
+    adapterName,
+    readVehicleInfo,
+    state,
+    vehicles,
+    activeVehicleId,
+    saveVehicle,
+    setActiveVehicleId,
+  } = useObd();
   const [manual, setManual] = useState("");
   const target = manual.trim() || vin || "";
   const decoded = target ? decodeVin(target) : null;
