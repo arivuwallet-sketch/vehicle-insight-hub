@@ -356,13 +356,57 @@ const SUBSYSTEM: Record<string, string> = {
   U0: "module-to-module network communication",
 };
 
+const GENERIC_REPAIR: Record<DtcInfo["system"], string[]> = {
+  Powertrain: [
+    "Record freeze frame data before clearing anything — it shows the conditions when the fault stored.",
+    "Inspect the wiring, connector and ground for the named circuit; back-probe rather than unplugging.",
+    "Compare the suspect live value against a known-good reading at the same engine conditions.",
+    "Repair the root cause, clear the code, then drive the readiness cycle and rescan to confirm.",
+  ],
+  Body: [
+    "Operate the affected function while watching live data to see if the request reaches the module.",
+    "Check power, ground and connector condition at the component before replacing it.",
+    "Flex door, seat and tailgate looms while monitoring — these chafe at hinge points.",
+  ],
+  Chassis: [
+    "Treat brake, steering and stability faults as safety-critical; verify the repair before road use.",
+    "Compare all wheel speed or position sensor readings in live data during a slow drive.",
+    "Inspect sensor tips, tone rings and connectors for rust, debris and water ingress.",
+  ],
+  Network: [
+    "Run a full deep scan: the silent module usually reports nothing at all.",
+    "Check power and ground at the missing module before suspecting the bus wiring.",
+    "Measure CAN high to CAN low with the ignition off — roughly 60 ohms is healthy.",
+  ],
+};
+
 export function lookupDtc(codeRaw: string): DtcInfo {
   const code = codeRaw.toUpperCase().trim();
   const letter = code[0] ?? "P";
   const system = SYSTEM_BY_LETTER[letter] ?? "Powertrain";
   const hit = DB[code];
   if (hit) {
-    return { code, title: hit.t, system, severity: hit.s, meaning: hit.m, causes: hit.c };
+    return {
+      code,
+      title: hit.t,
+      system,
+      severity: hit.s,
+      meaning: hit.m,
+      causes: hit.c,
+      repair: hit.r ?? GENERIC_REPAIR[system],
+    };
+  }
+  const fam = familyLookup(code);
+  if (fam) {
+    return {
+      code,
+      title: fam.t,
+      system,
+      severity: fam.s,
+      meaning: fam.m,
+      causes: fam.c,
+      repair: fam.r,
+    };
   }
   const group = SUBSYSTEM[code.slice(0, 2)] ?? "a manufacturer-defined subsystem";
   const manufacturerSpecific = code[1] === "1" || code[1] === "3";
@@ -379,6 +423,7 @@ export function lookupDtc(codeRaw: string): DtcInfo {
       "Damaged wiring, connector corrosion or a poor ground",
       "A related mechanical fault the sensor is reporting honestly",
     ],
+    repair: GENERIC_REPAIR[system],
   };
 }
 
