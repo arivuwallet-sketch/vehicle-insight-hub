@@ -8,6 +8,9 @@ import { DTC_DB_SIZE, lookupDtc } from "@/lib/obd/dtc";
 import { PID_BY_ID, type PidId } from "@/lib/obd/pids";
 
 export const Route = createFileRoute("/sessions")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    vehicle: typeof search["vehicle"] === "string" ? (search["vehicle"] as string) : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Scan Sessions & Reports — TorqueDeck" },
