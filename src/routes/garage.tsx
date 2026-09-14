@@ -88,6 +88,7 @@ function GaragePage() {
             const active = v.id === activeVehicleId;
             const decoded = v.vin ? decodeVin(v.vin) : null;
             const count = sessions.filter((s) => s.vehicleId === v.id).length;
+            const history = vehicleCodeHistory(v.id);
             return (
               <div
                 key={v.id}
