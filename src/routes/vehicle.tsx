@@ -2,11 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { AlertTriangle, BadgeCheck, Cpu, Database, LoaderCircle, Printer, RefreshCw } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Cpu, Database, LoaderCircle, Printer, RefreshCw, Save } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
-import { useObd } from "@/lib/obd/store";
+import { useObd, uid, type Vehicle } from "@/lib/obd/store";
 import { decodeVin } from "@/lib/obd/vin";
 import { lookupVinDatabase } from "@/lib/obd/vin.functions";
 
@@ -41,7 +42,19 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 function VehiclePage() {
-  const { vin, calId, ecuName, protocolName, adapterName, readVehicleInfo, state } = useObd();
+  const {
+    vin,
+    calId,
+    ecuName,
+    protocolName,
+    adapterName,
+    readVehicleInfo,
+    state,
+    vehicles,
+    activeVehicleId,
+    saveVehicle,
+    setActiveVehicleId,
+  } = useObd();
   const [manual, setManual] = useState("");
   const target = manual.trim() || vin || "";
   const decoded = target ? decodeVin(target) : null;
@@ -65,6 +78,47 @@ function VehiclePage() {
         .filter(Boolean)
         .join(" · ") || "Unavailable"
     : "Unavailable";
+
+  const matchByVin = vehicles.find((v) => v.vin && v.vin.toUpperCase() === decoded?.vin);
+  const activeVehicle = vehicles.find((v) => v.id === activeVehicleId);
+  const targetVehicle = matchByVin ?? activeVehicle ?? null;
+
+  const saveOfficialToGarage = () => {
+    if (!official || !decoded?.vin) return;
+    const base: Vehicle =
+      targetVehicle ??
+      ({
+        id: uid(),
+        nickname: "",
+        make: "",
+        model: "",
+        year: "",
+        vin: "",
+        plate: "",
+        odometer: "",
+        notes: "",
+      } satisfies Vehicle);
+    const updated: Vehicle = {
+      ...base,
+      vin: decoded.vin,
+      make: official.make ?? base.make,
+      model: official.model ?? base.model,
+      year: official.modelYear ?? base.year,
+      trim: [official.trim, official.series].filter(Boolean).join(" · ") || base.trim,
+      engine: engineDescription === "Unavailable" ? base.engine : engineDescription,
+      fuel: official.fuelType ?? base.fuel,
+      nickname: base.nickname || [official.modelYear, official.make, official.model].filter(Boolean).join(" "),
+      vinVerified: true,
+    };
+    saveVehicle(updated);
+    setActiveVehicleId(updated.id);
+    toast.success(
+      targetVehicle
+        ? `Updated ${updated.nickname || updated.make} in your garage`
+        : `Added ${updated.nickname || updated.make} to your garage`,
+    );
+  };
+
 
   return (
     <div className="space-y-6">
@@ -146,12 +200,26 @@ function VehiclePage() {
                 Decoded live from the United States Department of Transportation vPIC database.
               </p>
             </div>
-            {official && !official.warning && (
-              <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
-                <BadgeCheck className="size-4" /> VIN matched
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {official && !official.warning && (
+                <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
+                  <BadgeCheck className="size-4" /> VIN matched
+                </span>
+              )}
+              {official?.make && (
+                <Button size="sm" className="no-print" onClick={saveOfficialToGarage}>
+                  <Save className="size-4" />
+                  {targetVehicle ? "Update car in garage" : "Save to garage"}
+                </Button>
+              )}
+            </div>
           </div>
+          {official?.make && (
+            <p className="mb-3 text-xs text-muted-foreground">
+              Saving sets this car's official make, model, year and engine, so actuation tests and
+              code severity match the real vehicle.
+            </p>
+          )}
 
           {databaseQuery.isPending ? (
             <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted-foreground">

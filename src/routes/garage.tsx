@@ -113,8 +113,14 @@ function GaragePage() {
                       {v.nickname || `${v.make} ${v.model}`.trim() || "Untitled vehicle"}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      {[v.year, v.make, v.model].filter(Boolean).join(" ") || "No details"}
+                      {[v.year, v.make, v.model, v.trim].filter(Boolean).join(" ") || "No details"}
                     </div>
+                    {v.engine && <div className="text-xs text-muted-foreground">{v.engine}</div>}
+                    {v.vinVerified && (
+                      <div className="mt-1 inline-block rounded bg-ok/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ok">
+                        VIN verified
+                      </div>
+                    )}
                   </div>
                   {active && (
                     <span className="rounded bg-signal/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest text-signal">
