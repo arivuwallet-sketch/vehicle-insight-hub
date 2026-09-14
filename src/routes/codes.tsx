@@ -78,6 +78,7 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
           </ol>
         </div>
       </div>
+      <DtcAiDetail code={info.code} />
     </article>
   );
 }
