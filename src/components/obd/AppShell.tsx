@@ -33,6 +33,7 @@ const NAV = [
   { to: "/freeze-frame", label: "Freeze Frame", icon: Camera },
   { to: "/vehicle", label: "Vehicle Info", icon: Cpu },
   { to: "/canbus", label: "CAN Bus", icon: Network },
+  { to: "/actuations", label: "Actuation Tests", icon: Wrench },
   { to: "/expert", label: "Expert Console", icon: Terminal },
   { to: "/garage", label: "Garage", icon: Car },
   { to: "/sessions", label: "Sessions", icon: History },
