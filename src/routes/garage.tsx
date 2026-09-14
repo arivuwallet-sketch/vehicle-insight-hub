@@ -47,8 +47,17 @@ const empty = (): Vehicle => ({
 });
 
 function GaragePage() {
-  const { vehicles, saveVehicle, deleteVehicle, activeVehicleId, setActiveVehicleId, vin, sessions } =
-    useObd();
+  const {
+    vehicles,
+    saveVehicle,
+    deleteVehicle,
+    activeVehicleId,
+    setActiveVehicleId,
+    vin,
+    sessions,
+    vehicleCodeHistory,
+    clearVehicleHistory,
+  } = useObd();
   const [draft, setDraft] = useState<Vehicle | null>(null);
 
   const set = (k: keyof Vehicle, v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d));
