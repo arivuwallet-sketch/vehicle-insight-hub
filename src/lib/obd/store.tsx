@@ -59,6 +59,11 @@ export interface Vehicle {
   plate: string;
   odometer: string;
   notes: string;
+  /** Official record fields decoded from the VIN database */
+  engine?: string;
+  fuel?: string;
+  trim?: string;
+  vinVerified?: boolean;
 }
 
 export interface SessionRecord {
