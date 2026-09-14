@@ -14,7 +14,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
-import { DtcAiDetail } from "@/components/obd/DtcAiDetail";
 import { useObd } from "@/lib/obd/store";
 import { DTC_DB_SIZE, SEVERITY_ORDER, lookupDtc, type DtcInfo, type Severity } from "@/lib/obd/dtc";
 
@@ -79,7 +78,6 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
           </ol>
         </div>
       </div>
-      <DtcAiDetail code={info.code} />
     </article>
   );
 }

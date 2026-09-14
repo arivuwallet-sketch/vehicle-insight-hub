@@ -337,7 +337,43 @@ const DB: Record<string, RawEntry> = {
     m: "The instrument cluster is not communicating with the rest of the network.",
     c: ["Cluster power/ground fault", "CAN wiring", "Failed cluster"],
   },
+  P2002: {
+    t: "Diesel Particulate Filter Efficiency Below Threshold (Bank 1)",
+    s: "serious",
+    m: "The pressure and temperature sensors say the DPF is no longer trapping and burning soot properly.",
+    c: ["Soot-loaded or cracked DPF", "Failed differential pressure sensor or blocked hoses", "Repeated interrupted regenerations from short trips", "Injector or EGR fault feeding extra soot"],
+    r: [
+      "Read DPF soot mass, ash mass, differential pressure and distance since last regeneration in live data.",
+      "Check the pressure sensor hoses for soot blockage or splits before condemning the filter.",
+      "Run a forced regeneration if soot loading allows, then drive a motorway cycle and recheck.",
+      "Fix any upstream cause (EGR, injectors, turbo) or the new filter will block again.",
+    ],
+  },
+  P2463: {
+    t: "Diesel Particulate Filter — Soot Accumulation",
+    s: "serious",
+    m: "Soot in the particulate filter has passed the allowed limit, usually because regenerations keep failing or being cut short.",
+    c: ["Mostly short, low-speed journeys", "Failed or interrupted regeneration", "Faulty differential pressure or exhaust temperature sensor", "Leaking injector or stuck EGR valve"],
+    r: [
+      "Check soot mass and regeneration history in live data.",
+      "Verify exhaust temperature sensors read plausibly and match each other cold.",
+      "Attempt a forced regeneration, or drive at steady motorway speed for 20 minutes if the car allows it.",
+      "If soot mass is above the safe forced-regen limit, the filter needs off-car cleaning or replacement.",
+    ],
+  },
+  P0299: {
+    t: "Turbocharger / Supercharger Underboost",
+    s: "serious",
+    m: "Actual boost pressure stayed below the ECU's target, so the engine will feel flat and may go into limp mode.",
+    c: ["Split or loose boost hose / intercooler pipe", "Sticking variable-vane mechanism or wastegate", "Faulty boost pressure sensor", "Blocked DPF or air filter", "Worn turbo"],
+    r: [
+      "Compare requested against actual boost in live data during a road test.",
+      "Pressure-test the charge pipework for leaks.",
+      "Check vane or wastegate actuator travel with the actuator commanded through its range.",
+    ],
+  },
 };
+
 
 const SYSTEM_BY_LETTER: Record<string, DtcInfo["system"]> = {
   P: "Powertrain",
