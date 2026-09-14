@@ -77,6 +77,17 @@ export interface SessionRecord {
   notes: string;
 }
 
+export interface CodeHistoryEntry {
+  id: string;
+  vehicleId: string;
+  code: string;
+  kind: "stored" | "pending" | "permanent";
+  firstSeen: number;
+  lastSeen: number;
+  count: number;
+  clearedAt: number | null;
+}
+
 interface FreezeFrame {
   dtc: string | null;
   values: { label: string; value: string }[];
