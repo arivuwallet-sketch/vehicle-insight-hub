@@ -810,6 +810,10 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       sessions,
       saveSession,
       deleteSession,
+      codeHistory,
+      vehicleSessions,
+      vehicleCodeHistory,
+      clearVehicleHistory,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
@@ -821,6 +825,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       readVehicleInfo, sendRaw, saveSession,
       ecus, readiness, readinessCycle, monitorTests, ipt, mode09,
       deepScanning, deepStep, lastDeepScan, deepScan,
+      codeHistory, vehicleSessions, vehicleCodeHistory,
     ],
   );
 
