@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { useObd, uid, type Vehicle } from "@/lib/obd/store";
 import { decodeVin } from "@/lib/obd/vin";
+import { lookupDtc } from "@/lib/obd/dtc";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/garage")({
