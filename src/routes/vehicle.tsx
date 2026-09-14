@@ -1,11 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
-import { Cpu, Printer, RefreshCw } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Cpu, Database, LoaderCircle, Printer, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
 import { useObd } from "@/lib/obd/store";
 import { decodeVin } from "@/lib/obd/vin";
+import { lookupVinDatabase } from "@/lib/obd/vin.functions";
 
 export const Route = createFileRoute("/vehicle")({
   head: () => ({
@@ -21,6 +24,8 @@ export const Route = createFileRoute("/vehicle")({
         property: "og:description",
         content: "VIN, calibration ID and ECU identification read straight from the controller.",
       },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
   component: VehiclePage,
@@ -40,6 +45,26 @@ function VehiclePage() {
   const [manual, setManual] = useState("");
   const target = manual.trim() || vin || "";
   const decoded = target ? decodeVin(target) : null;
+  const lookupVin = useServerFn(lookupVinDatabase);
+  const databaseQuery = useQuery({
+    queryKey: ["official-vin", decoded?.vin],
+    queryFn: () => lookupVin({ data: { vin: decoded?.vin ?? "" } }),
+    enabled: decoded?.valid === true,
+    staleTime: 6 * 60 * 60 * 1000,
+    retry: 1,
+  });
+  const official = databaseQuery.data;
+
+  const engineDescription = official
+    ? [
+        official.engine,
+        official.displacementLiters ? `${official.displacementLiters} L` : null,
+        official.cylinders ? `${official.cylinders} cylinders` : null,
+        official.horsepower ? `${official.horsepower} hp` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || "Unavailable"
+    : "Unavailable";
 
   return (
     <div className="space-y-6">
@@ -109,6 +134,63 @@ function VehiclePage() {
           )}
         </section>
       </div>
+
+      {decoded?.valid && (
+        <section className="panel p-5" aria-live="polite">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="flex items-center gap-2 text-sm font-semibold">
+                <Database className="size-4 text-signal" /> Official vehicle record
+              </h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Decoded live from the United States Department of Transportation vPIC database.
+              </p>
+            </div>
+            {official && !official.warning && (
+              <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
+                <BadgeCheck className="size-4" /> VIN matched
+              </span>
+            )}
+          </div>
+
+          {databaseQuery.isPending ? (
+            <div className="flex min-h-32 items-center justify-center gap-2 text-sm text-muted-foreground">
+              <LoaderCircle className="size-4 animate-spin" /> Looking up official vehicle data…
+            </div>
+          ) : databaseQuery.isError ? (
+            <div className="flex items-start gap-2 rounded border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <span>{databaseQuery.error.message}</span>
+            </div>
+          ) : official ? (
+            <>
+              {official.warning && (
+                <div className="mb-3 flex items-start gap-2 rounded border border-warn/40 bg-warn/10 p-3 text-xs text-warn">
+                  <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                  <span>{official.warning}</span>
+                </div>
+              )}
+              <div className="grid gap-x-8 md:grid-cols-2 xl:grid-cols-3">
+                <Row label="Manufacturer" value={official.manufacturer ?? "Unavailable"} />
+                <Row label="Make" value={official.make ?? "Unavailable"} />
+                <Row label="Model" value={official.model ?? "Unavailable"} />
+                <Row label="Production / model year" value={official.modelYear ?? "Unavailable"} />
+                <Row label="Trim / series" value={[official.trim, official.series].filter(Boolean).join(" · ") || "Unavailable"} />
+                <Row label="Vehicle type" value={official.vehicleType ?? "Unavailable"} />
+                <Row label="Body" value={official.bodyClass ?? "Unavailable"} />
+                <Row label="Engine" value={engineDescription} />
+                <Row label="Engine manufacturer" value={official.engineManufacturer ?? "Unavailable"} />
+                <Row label="Fuel" value={official.fuelType ?? "Unavailable"} />
+                <Row label="Transmission" value={official.transmission ?? "Unavailable"} />
+                <Row label="Drive type" value={official.driveType ?? "Unavailable"} />
+                <div className="md:col-span-2 xl:col-span-3">
+                  <Row label="Assembly plant" value={official.plant ?? "Unavailable"} />
+                </div>
+              </div>
+            </>
+          ) : null}
+        </section>
+      )}
     </div>
   );
 }
