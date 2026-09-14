@@ -359,14 +359,19 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
   const scanDtcs = useCallback(async () => {
     if (!elm.connected) return;
-    const stored = await elm.send("03", 8000);
-    setDtcs(parseDtcResponse(stored, 3));
-    const pend = await elm.send("07", 8000);
-    setPendingDtcs(parseDtcResponse(pend, 7));
-    const perm = await elm.send("0A", 8000);
-    setPermanentDtcs(parseDtcResponse(perm, 0x0a));
+    const stored = parseDtcResponse(await elm.send("03", 8000), 3);
+    setDtcs(stored);
+    const pending = parseDtcResponse(await elm.send("07", 8000), 7);
+    setPendingDtcs(pending);
+    const permanent = parseDtcResponse(await elm.send("0A", 8000), 0x0a);
+    setPermanentDtcs(permanent);
+    recordCodesForVehicle([
+      ...stored.map((code) => ({ code, kind: "stored" as const })),
+      ...pending.map((code) => ({ code, kind: "pending" as const })),
+      ...permanent.map((code) => ({ code, kind: "permanent" as const })),
+    ]);
     await readStatus();
-  }, [elm, readStatus]);
+  }, [elm, readStatus, recordCodesForVehicle]);
 
   const readVehicleInfo = useCallback(async () => {
     if (!elm.connected) return;
