@@ -85,9 +85,19 @@ function DeepScanPage() {
     monitorTests,
     ipt,
     mode09,
+    vehicles,
+    activeVehicleId,
+    vin,
   } = useObd();
 
   const connected = state === "connected";
+  const car =
+    vehicles.find((v) => v.vin && vin && v.vin.toUpperCase() === vin.toUpperCase()) ??
+    vehicles.find((v) => v.id === activeVehicleId) ??
+    null;
+  const carLine = car
+    ? [car.year, car.make, car.model, car.trim].filter(Boolean).join(" ")
+    : "";
 
   return (
     <div className="space-y-6">
