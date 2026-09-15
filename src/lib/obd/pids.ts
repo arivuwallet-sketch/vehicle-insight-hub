@@ -1,3 +1,6 @@
+/** Wideband O2 sensor index, 1-8 (bank 1 sensors 1-4, then bank 2 sensors 1-4). */
+export type O2Index = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
+
 export type PidId =
   | "rpm"
   | "speed"
@@ -19,7 +22,21 @@ export type PidId =
   | "runtime"
   | "ambient"
   | "fuelPressure"
-  | "baro";
+  | "baro"
+  | "oilTemp"
+  | "fuelRate"
+  | "catB1S1"
+  | "catB2S1"
+  | "catB1S2"
+  | "catB2S2"
+  | "absLoad"
+  | "relThrottle"
+  | "pedalD"
+  | "pedalE"
+  | "hybridLife"
+  | `lambda${O2Index}`
+  | `wbCur${O2Index}`
+  | `wbVolt${O2Index}`;
 
 export interface PidDef {
   id: PidId;
