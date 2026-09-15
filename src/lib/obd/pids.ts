@@ -312,6 +312,177 @@ export const PIDS: PidDef[] = [
   },
 ];
 
+/* ---------------- additional SAE J1979 Mode 01 PIDs ---------------- */
+
+const EXTRA: PidDef[] = [
+  {
+    id: "oilTemp",
+    pid: "5C",
+    label: "Engine Oil Temp",
+    short: "Oil Temp",
+    unit: "°C",
+    min: -40,
+    max: 215,
+    bytes: 1,
+    nominal: [80, 115],
+    decode: (b) => (b[0] ?? 0) - 40,
+  },
+  {
+    id: "fuelRate",
+    pid: "5E",
+    label: "Engine Fuel Rate",
+    short: "Fuel Rate",
+    unit: "L/h",
+    min: 0,
+    max: 100,
+    bytes: 2,
+    decimals: 2,
+    decode: (b) => c(((b[0] ?? 0) * 256 + (b[1] ?? 0)) / 20, 2),
+  },
+  {
+    id: "absLoad",
+    pid: "43",
+    label: "Absolute Load Value",
+    short: "Abs Load",
+    unit: "%",
+    min: 0,
+    max: 400,
+    bytes: 2,
+    decimals: 1,
+    decode: (b) => c((((b[0] ?? 0) * 256 + (b[1] ?? 0)) * 100) / 255, 1),
+  },
+  {
+    id: "relThrottle",
+    pid: "45",
+    label: "Relative Throttle Position",
+    short: "Rel Throttle",
+    unit: "%",
+    min: 0,
+    max: 100,
+    bytes: 1,
+    decimals: 1,
+    decode: (b) => c(((b[0] ?? 0) * 100) / 255, 1),
+  },
+  {
+    id: "pedalD",
+    pid: "49",
+    label: "Accelerator Pedal D",
+    short: "Pedal D",
+    unit: "%",
+    min: 0,
+    max: 100,
+    bytes: 1,
+    decimals: 1,
+    decode: (b) => c(((b[0] ?? 0) * 100) / 255, 1),
+  },
+  {
+    id: "pedalE",
+    pid: "4A",
+    label: "Accelerator Pedal E",
+    short: "Pedal E",
+    unit: "%",
+    min: 0,
+    max: 100,
+    bytes: 1,
+    decimals: 1,
+    decode: (b) => c(((b[0] ?? 0) * 100) / 255, 1),
+  },
+  {
+    id: "hybridLife",
+    pid: "5B",
+    label: "Hybrid Battery Remaining Life",
+    short: "HV Batt",
+    unit: "%",
+    min: 0,
+    max: 100,
+    bytes: 1,
+    decimals: 1,
+    nominal: [40, 100],
+    decode: (b) => c(((b[0] ?? 0) * 100) / 255, 1),
+  },
+];
+
+/* Catalyst temperatures, PIDs 3C-3F: °C = ((A*256+B)/10) - 40 */
+const CAT_PIDS: { id: PidId; pid: string; label: string; short: string }[] = [
+  { id: "catB1S1", pid: "3C", label: "Catalyst Temp B1S1", short: "Cat B1S1" },
+  { id: "catB2S1", pid: "3D", label: "Catalyst Temp B2S1", short: "Cat B2S1" },
+  { id: "catB1S2", pid: "3E", label: "Catalyst Temp B1S2", short: "Cat B1S2" },
+  { id: "catB2S2", pid: "3F", label: "Catalyst Temp B2S2", short: "Cat B2S2" },
+];
+
+for (const cat of CAT_PIDS) {
+  EXTRA.push({
+    id: cat.id,
+    pid: cat.pid,
+    label: cat.label,
+    short: cat.short,
+    unit: "°C",
+    min: -40,
+    max: 1200,
+    bytes: 2,
+    decimals: 1,
+    nominal: [400, 800],
+    decode: (b) => c(((b[0] ?? 0) * 256 + (b[1] ?? 0)) / 10 - 40, 1),
+  });
+}
+
+/*
+ * Wideband O2 / air-fuel sensors.
+ * PIDs 24-2B: A,B = equivalence ratio (lambda) = (A*256+B)/32768
+ *             C,D = sensor current = ((C*256+D)/256) - 128 mA
+ * PIDs 34-3B: A,B = equivalence ratio, C,D = sensor voltage = (C*256+D)/8192 V
+ * Most 2008+ vehicles report air-fuel data only here, not on PIDs 14/15.
+ */
+const bank = (i: number) => (i <= 4 ? 1 : 2);
+const sens = (i: number) => (i <= 4 ? i : i - 4);
+
+for (let i = 1 as number; i <= 8; i++) {
+  const tag = `B${bank(i)}S${sens(i)}`;
+  const currentPid = (0x23 + i).toString(16).toUpperCase().padStart(2, "0"); // 24..2B
+  const voltPid = (0x33 + i).toString(16).toUpperCase().padStart(2, "0"); // 34..3B
+  EXTRA.push({
+    id: `lambda${i as O2Index}`,
+    pid: currentPid,
+    label: `Lambda ${tag} (equivalence ratio)`,
+    short: `λ ${tag}`,
+    unit: "λ",
+    min: 0,
+    max: 2,
+    bytes: 4,
+    decimals: 3,
+    nominal: [0.97, 1.03],
+    decode: (b) => c(((b[0] ?? 0) * 256 + (b[1] ?? 0)) / 32768, 3),
+  });
+  EXTRA.push({
+    id: `wbCur${i as O2Index}`,
+    pid: currentPid,
+    label: `Wideband O2 Current ${tag}`,
+    short: `O2 I ${tag}`,
+    unit: "mA",
+    min: -128,
+    max: 128,
+    bytes: 4,
+    decimals: 3,
+    nominal: [-1, 1],
+    decode: (b) => c(((b[2] ?? 0) * 256 + (b[3] ?? 0)) / 256 - 128, 3),
+  });
+  EXTRA.push({
+    id: `wbVolt${i as O2Index}`,
+    pid: voltPid,
+    label: `Wideband O2 Voltage ${tag}`,
+    short: `O2 V ${tag}`,
+    unit: "V",
+    min: 0,
+    max: 8,
+    bytes: 4,
+    decimals: 3,
+    nominal: [3.1, 3.5],
+    decode: (b) => c(((b[2] ?? 0) * 256 + (b[3] ?? 0)) / 8192, 3),
+  });
+}
+
+PIDS.push(...EXTRA);
+
 export const PID_BY_ID: Record<string, PidDef> = Object.fromEntries(
   PIDS.map((p) => [p.id, p]),
 );
