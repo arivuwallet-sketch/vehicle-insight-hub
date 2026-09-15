@@ -120,6 +120,47 @@ function DeepScanPage() {
         </div>
       </header>
 
+      {car && (
+        <section className="panel flex flex-wrap items-center gap-x-6 gap-y-2 p-4 text-sm">
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">Vehicle</div>
+            <div className="font-semibold">{carLine || car.nickname || "Saved vehicle"}</div>
+          </div>
+          {car.engine && (
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Engine</div>
+              <div className="readout">{car.engine}</div>
+            </div>
+          )}
+          {car.fuel && (
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">Fuel</div>
+              <div>{car.fuel}</div>
+            </div>
+          )}
+          {car.vin && (
+            <div>
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">VIN</div>
+              <div className="readout break-all">{car.vin}</div>
+            </div>
+          )}
+          {car.vinVerified && <Badge variant="secondary">VIN verified</Badge>}
+          {car.fuel && readiness && (
+            <Badge
+              variant={
+                /diesel/i.test(car.fuel) === readiness.compressionIgnition
+                  ? "outline"
+                  : "destructive"
+              }
+            >
+              {/diesel/i.test(car.fuel) === readiness.compressionIgnition
+                ? `${readiness.compressionIgnition ? "Diesel" : "Petrol"} monitor set matches VIN`
+                : "Monitor set does not match VIN fuel type"}
+            </Badge>
+          )}
+        </section>
+      )}
+
       {!connected && <OfflineNotice />}
 
       {deepScanning && (
