@@ -27,6 +27,7 @@ import {
   MODE09_ITEMS,
   decodeReadiness,
   ecuLabel,
+  type VehicleContext,
   parseIpt,
   parseMode06,
   splitByEcu,
@@ -440,6 +441,16 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       return;
     }
     setDeepScanning(true);
+    const car =
+      vehicles.find((v) => v.vin && vin && v.vin.toUpperCase() === vin.toUpperCase()) ??
+      vehicles.find((v) => v.id === activeVehicleId) ??
+      null;
+    const ctx: VehicleContext = {
+      make: car?.make,
+      modelYear: car?.year ? String(car.year) : undefined,
+      fuel: car?.fuel,
+      engine: car?.engine,
+    };
     const step = (s: string) => setDeepStep(s);
     try {
       await elm.send("ATH1");
@@ -450,7 +461,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       const responders = splitByEcu(disc);
       const found: EcuReport[] = responders.map((r) => ({
         header: r.header,
-        label: ecuLabel(r.header),
+        label: ecuLabel(r.header, ctx),
         stored: [],
         pending: [],
         permanent: [],
@@ -475,7 +486,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
           if (!target) {
             found.push({
               header: r.header,
-              label: ecuLabel(r.header),
+              label: ecuLabel(r.header, ctx),
               stored: key === "stored" ? codes : [],
               pending: key === "pending" ? codes : [],
               permanent: key === "permanent" ? codes : [],
