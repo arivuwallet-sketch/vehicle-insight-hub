@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { History, Printer, Save, Trash2 } from "lucide-react";
+import { FileSpreadsheet, FileText, History, Printer, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useObd } from "@/lib/obd/store";
 import { DTC_DB_SIZE, lookupDtc } from "@/lib/obd/dtc";
 import { PID_BY_ID, type PidId } from "@/lib/obd/pids";
+import { exportSessionCsv, exportSessionPdf } from "@/lib/obd/export";
 
 export const Route = createFileRoute("/sessions")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -38,6 +39,7 @@ function SessionsPage() {
   const { vehicle: vehicleFilter } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [notes, setNotes] = useState("");
+  const [technician, setTechnician] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
   const car = vehicleFilter ? vehicles.find((v) => v.id === vehicleFilter) : undefined;
