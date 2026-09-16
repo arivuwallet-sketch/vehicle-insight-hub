@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
 import { useObd } from "@/lib/obd/store";
-import { DTC_DB_SIZE, SEVERITY_ORDER, lookupDtc, type DtcInfo, type Severity } from "@/lib/obd/dtc";
+import { DTC_DB_SIZE, SEVERITY_ORDER, isValidDtc, lookupDtc, type DtcInfo, type Severity } from "@/lib/obd/dtc";
 
 export const Route = createFileRoute("/codes")({
   head: () => ({
