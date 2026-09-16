@@ -108,13 +108,15 @@ function Dashboard() {
             <div className="text-xs uppercase tracking-wider text-muted-foreground">
               Malfunction lamp
             </div>
-            <div className="font-display text-lg font-semibold">{milOn ? "ON" : "Off"}</div>
+            <div className="font-display text-lg font-semibold">
+              {state !== "connected" ? "—" : milOn ? "ON" : "Off"}
+            </div>
           </div>
         </div>
         <Link to="/codes" className="panel flex items-center justify-between p-4 hover:border-signal/50">
           <div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Stored codes</div>
-            <div className="readout text-2xl font-semibold">{dtcs.length || dtcCount}</div>
+            <div className="readout text-2xl font-semibold">{state === "connected" ? dtcs.length || dtcCount : "—"}</div>
           </div>
           <Badge variant={dtcs.length ? "destructive" : "secondary"}>
             {dtcs.length ? "Attention" : "Clear"}
@@ -123,7 +125,7 @@ function Dashboard() {
         <Link to="/codes" className="panel flex items-center justify-between p-4 hover:border-signal/50">
           <div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">Pending codes</div>
-            <div className="readout text-2xl font-semibold">{pendingDtcs.length}</div>
+            <div className="readout text-2xl font-semibold">{state === "connected" ? pendingDtcs.length : "—"}</div>
           </div>
           <Badge variant="secondary">Mode 07</Badge>
         </Link>

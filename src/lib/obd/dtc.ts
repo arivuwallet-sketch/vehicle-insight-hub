@@ -428,7 +428,7 @@ export function lookupDtc(codeRaw: string): DtcInfo {
       severity: hit.s,
       meaning: hit.m,
       causes: hit.c,
-      repair: hit.r ?? GENERIC_REPAIR[system],
+      repair: hit.r ?? [],
       definitionAvailable: true,
     };
   }

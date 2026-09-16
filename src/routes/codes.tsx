@@ -50,7 +50,7 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <span className="readout text-xl font-bold text-signal">{info.code}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wider ${SEV_STYLE[info.severity]}`}>
-          {info.severity}
+          {info.severity === "unknown" ? "severity unavailable" : `${info.severity} reference severity`}
         </span>
         <Badge variant="secondary">{info.system}</Badge>
         <Badge variant="outline">{tag}</Badge>
@@ -58,7 +58,7 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
       <h3 className="mt-2 text-base font-semibold">{info.title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{info.meaning}</p>
       {info.definitionAvailable ? <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div>
+        {info.repair.length > 0 && <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Likely causes
           </div>
@@ -67,7 +67,7 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
               <li key={c}>{c}</li>
             ))}
           </ul>
-        </div>
+        </div>}
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Repair steps

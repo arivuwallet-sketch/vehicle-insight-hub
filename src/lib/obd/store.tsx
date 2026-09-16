@@ -727,7 +727,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
     /** Returns false when the vehicle clearly did not answer the batched request. */
     const readGroup = async (group: PidId[]): Promise<boolean> => {
-      const defs = group.map((id) => PID_BY_ID[id]!).filter(Boolean);
+      const defs = group.map((id) => PID_BY_ID[id]).filter((def): def is PidDef => Boolean(def));
       const unique = Array.from(new Set(defs.map((d) => d.pid)));
       if (unique.length < 2) {
         for (const id of group) await readOne(id);
@@ -740,7 +740,8 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       const answered = unique.filter((p) => parsed[p]).length;
       if (answered < unique.length) return false;
       for (const id of group) {
-        const def = PID_BY_ID[id]!;
+        const def = PID_BY_ID[id];
+        if (!def) continue;
         const data = parsed[def.pid];
         if (!data || data.length < def.bytes) continue;
         record(id, def.decode(data.slice(0, def.bytes)));
@@ -767,6 +768,11 @@ export function ObdProvider({ children }: { children: ReactNode }) {
               await readOne(id);
             }
           } catch {
+            setLive((cur) => {
+              const next = { ...cur };
+              for (const id of group) delete next[id];
+              return next;
+            });
             return;
           }
         }
