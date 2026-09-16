@@ -37,6 +37,12 @@ export interface MakeProfile {
   /** Diagnostic addressing used by this maker's engine ECU on 11-bit CAN. */
   header: string;
   headerNote: string;
+  /**
+   * False when no brand-specific actuator routine has been verified for this
+   * make yet — only standard UDS/OBD-II diagnostics are offered.
+   */
+  verified?: boolean;
+
   tests: ActuationTest[];
 }
 
