@@ -17,6 +17,7 @@ import {
   isNegative,
   openBluetooth,
   openSerial,
+  parseBatchResponse,
   parseDtcResponse,
   parseVin,
   serialSupported,
@@ -670,34 +671,88 @@ export function ObdProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (state !== "connected" || !polling || activePids.length === 0) return;
     let cancelled = false;
+    /** null = not tried yet on this connection, false = vehicle rejected batching */
+    let batchOk: boolean | null = null;
+
+    const record = (id: PidId, value: number) => {
+      if (!Number.isFinite(value)) return;
+      const now = Date.now();
+      sampleCount.current += 1;
+      const prevMax = maxima.current[id];
+      if (prevMax == null || value > prevMax) maxima.current[id] = value;
+      setLive((cur) => ({ ...cur, [id]: value }));
+      setHistory((cur) => {
+        const arr = cur[id] ? [...(cur[id] as Sample[]), { t: now, v: value }] : [{ t: now, v: value }];
+        if (arr.length > MAX_POINTS) arr.splice(0, arr.length - MAX_POINTS);
+        return { ...cur, [id]: arr };
+      });
+    };
+
+    /** Group the active PIDs into request groups of at most six unique PID codes. */
+    const groups: PidId[][] = [];
+    for (const id of activePids) {
+      if (!PID_BY_ID[id]) continue;
+      const last = groups[groups.length - 1];
+      const codes = new Set((last ?? []).map((x) => PID_BY_ID[x]?.pid));
+      if (last && (codes.has(PID_BY_ID[id]?.pid) || codes.size < 6)) last.push(id);
+      else groups.push([id]);
+    }
+
+    const readOne = async (id: PidId) => {
+      const def = PID_BY_ID[id];
+      if (!def) return;
+      const resp = await elm.send(`01${def.pid}`, 2500);
+      const payload = extractPayload(resp, 1, def.pid);
+      if (!payload || payload.length < def.bytes) return;
+      record(id, def.decode(payload.slice(0, def.bytes)));
+    };
+
+    /** Returns false when the vehicle clearly did not answer the batched request. */
+    const readGroup = async (group: PidId[]): Promise<boolean> => {
+      const defs = group.map((id) => PID_BY_ID[id]!).filter(Boolean);
+      const unique = Array.from(new Set(defs.map((d) => d.pid)));
+      if (unique.length < 2) {
+        for (const id of group) await readOne(id);
+        return true;
+      }
+      const lengths: Record<string, number> = {};
+      for (const d of defs) lengths[d.pid] = Math.max(lengths[d.pid] ?? 0, d.bytes);
+      const resp = await elm.send(`01${unique.join("")}`, 3000);
+      const parsed = parseBatchResponse(resp, lengths);
+      const answered = unique.filter((p) => parsed[p]).length;
+      if (answered < unique.length) return false;
+      for (const id of group) {
+        const def = PID_BY_ID[id]!;
+        const data = parsed[def.pid];
+        if (!data || data.length < def.bytes) continue;
+        record(id, def.decode(data.slice(0, def.bytes)));
+      }
+      return true;
+    };
 
     const loop = async () => {
       while (!cancelled) {
-        for (const id of activePids) {
+        for (const group of groups) {
           if (cancelled) return;
-          const def = PID_BY_ID[id];
-          if (!def) continue;
           try {
-            const resp = await elm.send(`01${def.pid}`, 2500);
-            const payload = extractPayload(resp, 1, def.pid);
-            if (!payload || payload.length < def.bytes) continue;
-            const value = def.decode(payload.slice(0, def.bytes));
-            if (!Number.isFinite(value)) continue;
-            const now = Date.now();
-            sampleCount.current += 1;
-            const prevMax = maxima.current[id];
-            if (prevMax == null || value > prevMax) maxima.current[id] = value;
-            setLive((cur) => ({ ...cur, [id]: value }));
-            setHistory((cur) => {
-              const arr = cur[id] ? [...(cur[id] as Sample[]), { t: now, v: value }] : [{ t: now, v: value }];
-              if (arr.length > MAX_POINTS) arr.splice(0, arr.length - MAX_POINTS);
-              return { ...cur, [id]: arr };
-            });
+            if (batchOk !== false) {
+              const ok = await readGroup(group);
+              if (ok) {
+                batchOk = true;
+                continue;
+              }
+              // vehicle rejected multi-PID framing — never try it again this session
+              batchOk = false;
+            }
+            for (const id of group) {
+              if (cancelled) return;
+              await readOne(id);
+            }
           } catch {
             return;
           }
         }
-        await new Promise((r) => setTimeout(r, 60));
+        await new Promise((r) => setTimeout(r, 40));
       }
     };
     void loop();
@@ -705,6 +760,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [state, polling, activePids, elm]);
+
 
   /* ---------------- sessions ---------------- */
 

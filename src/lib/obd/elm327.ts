@@ -440,3 +440,58 @@ export function parseVin(resp: string): string | null {
   const m = text.match(/[A-HJ-NPR-Z0-9]{17}/);
   return m ? m[0] : null;
 }
+
+/* ------------------------------------------------------------------ */
+/* Multi-PID (batched) Mode 01 requests                                */
+/* ------------------------------------------------------------------ */
+
+/**
+ * SAE J1979 allows up to six Mode 01 PIDs in a single CAN request
+ * (e.g. "010C0D05114210"). The ECU answers with one 41 block containing every
+ * requested PID back-to-back. Many older/non-CAN vehicles reject this, so the
+ * caller must fall back to one request per PID when this returns nothing.
+ *
+ * `lengths` maps a PID hex string (upper case, 2 chars) to its data byte count.
+ * Returns a map of PID hex -> data bytes, for whichever PIDs the ECU answered.
+ */
+export function parseBatchResponse(
+  resp: string,
+  lengths: Record<string, number>,
+): Record<string, number[]> {
+  const out: Record<string, number[]> = {};
+  if (!resp || /NO DATA|UNABLE|ERROR|STOPPED|TIMEOUT|CAN ERROR|BUS/i.test(resp)) return out;
+
+  const bytes: number[] = [];
+  for (const lineRaw of resp.split("\n")) {
+    let line = lineRaw.trim();
+    if (!line || NEGATIVE.test(line)) continue;
+    // ISO-TP total length header emitted before an indexed multi-frame reply
+    if (/^[0-9A-F]{3}$/i.test(line)) continue;
+    line = line.replace(/^[0-9A-F]:\s*/i, "");
+    const toks = line.match(/[0-9A-F]{2}/gi);
+    if (!toks) continue;
+    for (const t of toks) bytes.push(parseInt(t, 16));
+  }
+
+  let i = bytes.indexOf(0x41);
+  if (i === -1) return out;
+  i += 1;
+  while (i < bytes.length) {
+    const pidByte = bytes[i];
+    if (pidByte === undefined) break;
+    if (pidByte === 0x41) {
+      // a fresh response block (non-CAN protocols answer line by line)
+      i += 1;
+      continue;
+    }
+    const pid = pidByte.toString(16).toUpperCase().padStart(2, "0");
+    const len = lengths[pid];
+    if (len === undefined) break; // unknown framing — stop rather than guess
+    const data = bytes.slice(i + 1, i + 1 + len);
+    if (data.length < len) break;
+    if (!out[pid]) out[pid] = data;
+    i += 1 + len;
+  }
+  return out;
+}
+
