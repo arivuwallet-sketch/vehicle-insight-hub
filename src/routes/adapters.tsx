@@ -140,6 +140,25 @@ function AdaptersPage() {
 
       <div className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
         <h2 className="font-display font-semibold tracking-wide text-foreground">
+          Vehicle coverage
+        </h2>
+        <p className="mt-3">
+          Standard OBD-II diagnostics — live data, stored and pending fault codes, freeze frame,
+          readiness monitors, Mode 06 test results and VIN — work across any OBD-II compliant
+          vehicle, including all major Indian brands such as Maruti Suzuki, Tata, Mahindra, Hyundai,
+          Kia, Honda, Toyota and Renault.
+        </p>
+        <p className="mt-2">
+          Brand-specific actuator and routine tests are currently verified only for: Volvo, Nissan /
+          Infiniti, Mazda, Subaru, Chrysler / Jeep / Dodge / Fiat / Alfa Romeo, and Jaguar / Land
+          Rover. For every other make the Actuation Tests page says so plainly and offers standard
+          UDS diagnostics instead of untested commands.
+        </p>
+      </div>
+
+      <div className="rounded-lg border border-border bg-card p-5 text-sm text-muted-foreground">
+
+        <h2 className="font-display font-semibold tracking-wide text-foreground">
           Getting a clean connection
         </h2>
         <ol className="mt-3 list-decimal space-y-1 pl-5">

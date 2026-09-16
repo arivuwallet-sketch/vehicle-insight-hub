@@ -136,7 +136,20 @@ function ActuationsPage() {
         </select>
       </div>
 
+      {profile.verified === false && (
+        <div className="panel flex items-start gap-3 border-warn/40 p-4 text-sm">
+          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />
+          <p className="text-muted-foreground">
+            Brand-specific actuation routines for{" "}
+            <strong className="text-foreground">{profile.make}</strong> aren&apos;t verified yet —
+            standard UDS diagnostics only. Everything listed below is generic ISO 14229 / OBD-II and
+            works on any compliant vehicle.
+          </p>
+        </div>
+      )}
+
       <div className="panel flex items-start gap-3 border-danger/40 p-4 text-sm">
+
         <ShieldAlert className="mt-0.5 size-5 shrink-0 text-danger" />
         <p className="text-muted-foreground">
           These commands move real actuators and can write to control modules. Keep hands clear of
