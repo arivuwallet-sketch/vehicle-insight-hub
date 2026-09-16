@@ -420,6 +420,16 @@ const GENERIC_REPAIR: Record<DtcInfo["system"], string[]> = {
   ],
 };
 
+/**
+ * A real SAE J2012 diagnostic trouble code: letter P/B/C/U, a 0-3 digit,
+ * then three hex digits. Anything else is not a code and must not be decoded.
+ */
+export const DTC_PATTERN = /^[PBCU][0-3][0-9A-F]{3}$/;
+
+export function isValidDtc(codeRaw: string): boolean {
+  return DTC_PATTERN.test(codeRaw.toUpperCase().trim());
+}
+
 export function lookupDtc(codeRaw: string): DtcInfo {
   const code = codeRaw.toUpperCase().trim();
   const letter = code[0] ?? "P";
