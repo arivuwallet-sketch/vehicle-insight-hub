@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { Network, Play, Square, Trash2 } from "lucide-react";
+import { Network, Play, Send, Square, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
@@ -32,10 +32,7 @@ interface FrameStat {
   lastTs: number;
 }
 
-const MODES = [
-  { cmd: "ATMA", label: "Monitor all traffic" },
-  { cmd: "ATCAF0\rATMA", label: "Monitor all (CAN formatting off)" },
-];
+type PassiveMode = "all" | "receive" | "transmit";
 
 function CanBusPage() {
   const { elm, state, protocolName } = useObd();
@@ -43,6 +40,18 @@ function CanBusPage() {
   const [frames, setFrames] = useState<string[]>([]);
   const [stats, setStats] = useState<Record<string, FrameStat>>({});
   const [filter, setFilter] = useState("");
+  const [mode, setMode] = useState<PassiveMode>("all");
+  const [monitorId, setMonitorId] = useState("7E8");
+  const [cf, setCf] = useState("");
+  const [cm, setCm] = useState("");
+  const [rate, setRate] = useState(0);
+  const [txHeader, setTxHeader] = useState("7DF");
+  const [txData, setTxData] = useState("02 01 0C");
+  const [txReply, setTxReply] = useState("");
+  const [txBusy, setTxBusy] = useState(false);
+  const [repeatMs, setRepeatMs] = useState(0);
+  const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const rateRef = useRef(0);
   const bufRef = useRef<string[]>([]);
   const statRef = useRef<Record<string, FrameStat>>({});
 
@@ -57,6 +66,20 @@ function CanBusPage() {
     return () => clearInterval(t);
   }, []);
 
+  useEffect(() => {
+    const t = setInterval(() => {
+      setRate(rateRef.current * 2);
+      rateRef.current = 0;
+    }, 500);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (repeatRef.current) clearInterval(repeatRef.current);
+    };
+  }, []);
+
   const start = async () => {
     if (state !== "connected") {
       toast.error("Connect an adapter first");
@@ -68,8 +91,23 @@ function CanBusPage() {
       });
     }
     setRunning(true);
+    if (repeatRef.current) {
+      clearInterval(repeatRef.current);
+      repeatRef.current = null;
+    }
     await elm.send("ATH1");
-    await elm.startMonitor("ATMA", (line) => {
+    const clean = (v: string) => v.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
+    if (clean(cf)) await elm.send(`ATCF${clean(cf)}`);
+    if (clean(cm)) await elm.send(`ATCM${clean(cm)}`);
+    const target = clean(monitorId);
+    const cmd =
+      mode === "receive" && target
+        ? `ATMR${target.slice(-2)}`
+        : mode === "transmit" && target
+          ? `ATMT${target.slice(-2)}`
+          : "ATMA";
+    await elm.startMonitor(cmd, (line) => {
+      rateRef.current += 1;
       if (!/[0-9A-F]/i.test(line)) return;
       bufRef.current.push(line);
       const id = line.trim().split(/\s+/)[0] ?? "????";
@@ -85,6 +123,7 @@ function CanBusPage() {
 
   const stop = async () => {
     await elm.stopMonitor();
+    await elm.send("ATCRA");
     await elm.send("ATH0");
     setRunning(false);
   };
