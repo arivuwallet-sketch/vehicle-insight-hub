@@ -82,6 +82,12 @@ export interface SessionRecord {
   maxima: Partial<Record<PidId, number>>;
   samples: number;
   notes: string;
+  /** Every live sample recorded during the session (older sessions may omit this). */
+  log?: Partial<Record<PidId, Sample[]>> | undefined;
+  /** Readiness monitors as reported by Mode 01 PID 01 at save time. */
+  readiness?: { name: string; supported: boolean; complete: boolean }[] | undefined;
+  /** Freeze frame values captured with Mode 02. */
+  freeze?: { label: string; value: string }[] | undefined;
 }
 
 export interface CodeHistoryEntry {
