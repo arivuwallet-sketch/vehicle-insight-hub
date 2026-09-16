@@ -130,6 +130,12 @@ function SessionsPage() {
                     <Button size="sm" variant="ghost" onClick={() => setOpenId(open ? null : s.id)}>
                       {open ? "Hide detail" : "View detail"}
                     </Button>
+                    <Button size="sm" variant="ghost" onClick={() => exportSessionCsv(s)}>
+                      <FileSpreadsheet className="size-3.5" /> CSV
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => exportSessionPdf(s, technician)}>
+                      <FileText className="size-3.5" /> PDF
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
