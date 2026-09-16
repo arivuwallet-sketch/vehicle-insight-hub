@@ -714,7 +714,14 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       if (!def) return;
       const resp = await elm.send(`01${def.pid}`, 2500);
       const payload = extractPayload(resp, 1, def.pid);
-      if (!payload || payload.length < def.bytes) return;
+      if (!payload || payload.length < def.bytes) {
+        setLive((cur) => {
+          const next = { ...cur };
+          delete next[id];
+          return next;
+        });
+        return;
+      }
       record(id, def.decode(payload.slice(0, def.bytes)));
     };
 
