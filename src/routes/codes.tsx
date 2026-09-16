@@ -96,7 +96,9 @@ function CodesPage() {
     return all.sort((a, b) => SEVERITY_ORDER[a.info.severity] - SEVERITY_ORDER[b.info.severity]);
   }, [dtcs, pendingDtcs, permanentDtcs]);
 
-  const lookupResult = query.trim().length >= 4 ? lookupDtc(query) : null;
+  const trimmedQuery = query.trim();
+  const queryIsCode = isValidDtc(trimmedQuery);
+  const lookupResult = queryIsCode ? lookupDtc(trimmedQuery) : null;
 
   return (
     <div className="space-y-6">
