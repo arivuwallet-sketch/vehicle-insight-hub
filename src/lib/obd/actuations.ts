@@ -587,13 +587,43 @@ export const MAKE_PROFILES: MakeProfile[] = [
   },
 
   {
+    id: "maruti",
+    make: "Maruti Suzuki / Suzuki",
+    aliases: ["maruti", "suzuki"],
+    header: "7E0",
+    headerNote: "Engine ECU at 7E0 on CAN. Standard OBD-II diagnostics are fully supported.",
+    verified: false,
+    tests: UNIVERSAL_TESTS,
+  },
+  {
+    id: "tata",
+    make: "Tata Motors",
+    aliases: ["tata"],
+    header: "7E0",
+    headerNote: "Engine ECU at 7E0 on CAN. Standard OBD-II diagnostics are fully supported.",
+    verified: false,
+    tests: UNIVERSAL_TESTS,
+  },
+  {
+    id: "mahindra",
+    make: "Mahindra",
+    aliases: ["mahindra"],
+    header: "7E0",
+    headerNote: "Engine ECU at 7E0 on CAN. Standard OBD-II diagnostics are fully supported.",
+    verified: false,
+    tests: UNIVERSAL_TESTS,
+  },
+
+  {
     id: "generic",
     make: "Other / unknown make",
     aliases: [],
     header: "7E0",
     headerNote: "Standard 11-bit engine ECU address used by almost every OBD-II vehicle.",
+    verified: false,
     tests: UNIVERSAL_TESTS,
   },
+
 ];
 
 export function profileForMake(make: string): MakeProfile {
