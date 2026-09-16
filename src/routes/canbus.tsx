@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
 import { useObd } from "@/lib/obd/store";
+import { isNegative } from "@/lib/obd/elm327";
 
 export const Route = createFileRoute("/canbus")({
   head: () => ({
@@ -170,6 +171,7 @@ function CanBusPage() {
       const headerReply = await elm.send(`ATSH${header}`);
       if (!/OK/i.test(headerReply)) throw new Error(`Adapter rejected header: ${headerReply}`);
       const reply = await elm.send(data, 8000);
+      if (isNegative(reply)) throw new Error(`Controller rejected the frame: ${reply || "no reply"}`);
       setTxReply(reply.trim() || "No response");
       for (const line of reply.split("\n")) {
         const t = line.trim();

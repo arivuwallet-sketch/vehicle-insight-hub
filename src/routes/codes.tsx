@@ -147,10 +147,10 @@ function CodesPage() {
           </div>
         ))}
         <div className="panel flex items-center gap-2 p-4">
-          <ShieldAlert className={milOn ? "size-6 text-danger" : "size-6 text-muted-foreground"} />
+          <ShieldAlert className={state === "connected" && milOn ? "size-6 text-danger" : "size-6 text-muted-foreground"} />
           <div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">MIL</div>
-            <div className="font-display font-semibold">{milOn ? "Illuminated" : "Off"}</div>
+            <div className="font-display font-semibold">{state !== "connected" ? "—" : milOn ? "Illuminated" : "Off"}</div>
           </div>
         </div>
       </div>

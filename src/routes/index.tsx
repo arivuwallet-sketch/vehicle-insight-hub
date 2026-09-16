@@ -96,10 +96,10 @@ function Dashboard() {
         <div
           className={cn(
             "panel flex items-center gap-3 p-4",
-            milOn ? "border-danger/60" : "border-ok/40",
+            state !== "connected" ? "border-border" : milOn ? "border-danger/60" : "border-ok/40",
           )}
         >
-          {milOn ? (
+          {state === "connected" && milOn ? (
             <AlertTriangle className="size-7 text-danger" />
           ) : (
             <CheckCircle2 className="size-7 text-ok" />

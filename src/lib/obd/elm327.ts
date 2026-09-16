@@ -352,7 +352,7 @@ export class Elm327 {
 const NEGATIVE = /NO DATA|UNABLE|ERROR|STOPPED|SEARCHING|TIMEOUT|CAN ERROR|BUS/i;
 
 export function isNegative(resp: string) {
-  return !resp || NEGATIVE.test(resp);
+  return !resp || NEGATIVE.test(resp) || /(?:^|\s)7F\s+[0-9A-F]{2}\s+[0-9A-F]{2}(?:\s|$)/i.test(resp);
 }
 
 /** Flatten an ELM327 hex reply into a byte array, dropping CAN multi-line indices. */

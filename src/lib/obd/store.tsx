@@ -361,6 +361,9 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       const a = p[0] ?? 0;
       setMilOn((a & 0x80) !== 0);
       setDtcCount(a & 0x7f);
+    } else {
+      setMilOn(false);
+      setDtcCount(0);
     }
   }, [elm]);
 
@@ -382,6 +385,9 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
   const readVehicleInfo = useCallback(async () => {
     if (!elm.connected) return;
+    setVin(null);
+    setCalId(null);
+    setEcuName(null);
     const v = await elm.send("0902", 8000);
     const parsed = parseVin(v);
     if (parsed) setVin(parsed);
@@ -650,6 +656,22 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     setStatusText("No adapter connected");
     setTransport(null);
     setLive({});
+    setHistory({});
+    setDtcs([]);
+    setPendingDtcs([]);
+    setPermanentDtcs([]);
+    setMilOn(false);
+    setDtcCount(0);
+    setVin(null);
+    setCalId(null);
+    setEcuName(null);
+    setFreeze(null);
+    setEcus([]);
+    setReadiness(null);
+    setReadinessCycle(null);
+    setMonitorTests([]);
+    setIpt([]);
+    setMode09({});
   }, [elm]);
 
   const reconnect = useCallback(async () => {

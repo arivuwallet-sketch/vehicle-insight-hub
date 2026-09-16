@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
 import { useObd } from "@/lib/obd/store";
+import { isNegative } from "@/lib/obd/elm327";
 import { MAKE_PROFILES, profileForMake, type MakeProfile } from "@/lib/obd/actuations";
 
 export const Route = createFileRoute("/actuations")({
@@ -68,6 +69,7 @@ function ActuationsPage() {
       const headerReply = await sendRaw(`ATSH${cleanHeader}`);
       if (!/OK/i.test(headerReply)) throw new Error(`Adapter rejected header: ${headerReply || "no reply"}`);
       const response = await sendRaw(cleanRequest);
+      if (isNegative(response)) throw new Error(`Controller rejected the request: ${response || "no reply"}`);
       setReply(response || "(empty adapter reply)");
       toast.success("Request sent — inspect the controller reply");
     } catch (error) {

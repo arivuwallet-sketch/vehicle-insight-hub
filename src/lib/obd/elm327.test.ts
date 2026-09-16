@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { decodeDtcBytes, extractPayload, parseBatchResponse, parseDtcResponse, parseHexBytes, parseVin } from "./elm327";
+import { decodeDtcBytes, extractPayload, isNegative, parseBatchResponse, parseDtcResponse, parseHexBytes, parseVin } from "./elm327";
 
 describe("ELM327 response parsing", () => {
   test("extracts a requested Mode 01 payload", () => {
@@ -9,6 +9,7 @@ describe("ELM327 response parsing", () => {
   test("ignores adapter error text", () => {
     expect(parseHexBytes("SEARCHING...\nNO DATA")).toEqual([]);
     expect(extractPayload("CAN ERROR", 1, "0C")).toBeNull();
+    expect(isNegative("7F 31 22")).toBe(true);
   });
 
   test("decodes two-byte DTC values", () => {
