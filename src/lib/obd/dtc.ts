@@ -1,6 +1,4 @@
-import { familyLookup } from "./dtc-families";
-
-export type Severity = "critical" | "serious" | "moderate" | "minor";
+export type Severity = "critical" | "serious" | "moderate" | "minor" | "unknown";
 
 export interface DtcInfo {
   code: string;
@@ -10,6 +8,7 @@ export interface DtcInfo {
   meaning: string;
   causes: string[];
   repair: string[];
+  definitionAvailable: boolean;
 }
 
 interface RawEntry {
@@ -21,8 +20,8 @@ interface RawEntry {
 }
 
 /**
- * Curated generic (SAE J2012) DTC database with plain-English explanations.
- * Codes not listed fall back to a structured range-based description.
+ * Curated reference entries. A code not present here stays unidentified rather
+ * than receiving a generated title, severity, cause, or repair procedure.
  */
 const DB: Record<string, RawEntry> = {
   P0010: {
@@ -382,20 +381,6 @@ const SYSTEM_BY_LETTER: Record<string, DtcInfo["system"]> = {
   U: "Network",
 };
 
-const SUBSYSTEM: Record<string, string> = {
-  P0: "fuel and air metering, ignition, emissions or auxiliary emission controls",
-  P1: "fuel and air metering",
-  P2: "fuel and air metering / injector circuit",
-  P3: "ignition system, misfire detection or auxiliary controls",
-  P4: "auxiliary emission controls",
-  P5: "vehicle speed, idle control and auxiliary inputs",
-  P6: "computer output circuits and module communication",
-  P7: "transmission",
-  B0: "body electronics such as restraints, climate and lighting",
-  C0: "chassis systems such as ABS, suspension and steering",
-  U0: "module-to-module network communication",
-};
-
 const GENERIC_REPAIR: Record<DtcInfo["system"], string[]> = {
   Powertrain: [
     "Record freeze frame data before clearing anything — it shows the conditions when the fault stored.",
@@ -444,36 +429,18 @@ export function lookupDtc(codeRaw: string): DtcInfo {
       meaning: hit.m,
       causes: hit.c,
       repair: hit.r ?? GENERIC_REPAIR[system],
+      definitionAvailable: true,
     };
   }
-  const fam = familyLookup(code);
-  if (fam) {
-    return {
-      code,
-      title: fam.t,
-      system,
-      severity: fam.s,
-      meaning: fam.m,
-      causes: fam.c,
-      repair: fam.r,
-    };
-  }
-  const group = SUBSYSTEM[code.slice(0, 2)] ?? "a manufacturer-defined subsystem";
-  const manufacturerSpecific = code[1] === "1" || code[1] === "3";
   return {
     code,
-    title: `${system} fault code ${code}`,
+    title: "Definition unavailable",
     system,
-    severity: "moderate",
-    meaning: `${code} is ${
-      manufacturerSpecific ? "a manufacturer-specific" : "a generic"
-    } ${system.toLowerCase()} code covering ${group}. The exact wording depends on the carmaker, but the controller stored it because a monitored value stayed outside its allowed range.`,
-    causes: [
-      "Faulty sensor or actuator in the affected circuit",
-      "Damaged wiring, connector corrosion or a poor ground",
-      "A related mechanical fault the sensor is reporting honestly",
-    ],
-    repair: GENERIC_REPAIR[system],
+    severity: "unknown",
+    meaning: "The vehicle reported this code, but this scanner has no verified definition for it. Manufacturer-specific wording must come from service information for the exact VIN and control module.",
+    causes: [],
+    repair: [],
+    definitionAvailable: false,
   };
 }
 
@@ -482,6 +449,7 @@ export const SEVERITY_ORDER: Record<Severity, number> = {
   serious: 1,
   moderate: 2,
   minor: 3,
+  unknown: 4,
 };
 
 export const DTC_DB_SIZE = Object.keys(DB).length;

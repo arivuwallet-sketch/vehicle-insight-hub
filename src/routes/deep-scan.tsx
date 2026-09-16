@@ -14,13 +14,13 @@ export const Route = createFileRoute("/deep-scan")({
       {
         name: "description",
         content:
-          "Scan every control module on the vehicle bus: per-ECU fault memory, readiness monitors, Mode 06 on-board test results and Mode 09 vehicle information.",
+          "Scan emissions-related OBD responders: fault memory, readiness monitors, Mode 06 test results and Mode 09 vehicle information.",
       },
       { property: "og:title", content: "Full System Deep Scan — TorqueDeck" },
       {
         property: "og:description",
         content:
-          "Every control module, every mode: fault memory, readiness, on-board monitor tests and in-use performance counters.",
+          "Standards-based OBD responders, fault memory, readiness, monitor tests and in-use performance counters.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -105,8 +105,8 @@ function DeepScanPage() {
         <div>
           <h1 className="font-display text-2xl font-bold tracking-wide">Full system deep scan</h1>
           <p className="text-sm text-muted-foreground">
-            Every responding control module, all fault memory, readiness monitors, on-board monitor
-            test results and vehicle information — read live off the bus.
+            Emissions-related modules that answer standard OBD-II requests, with fault memory,
+            readiness, monitor tests and vehicle information read live from the bus.
           </p>
         </div>
         <div className="flex gap-2">
@@ -174,11 +174,11 @@ function DeepScanPage() {
 
       <section className="space-y-3">
         <h2 className="font-display text-sm font-bold uppercase tracking-widest">
-          Control modules ({ecus.length})
+          OBD responders ({ecus.length})
         </h2>
         {ecus.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No modules scanned yet. Connect an adapter and run a deep scan.
+            No OBD responders scanned yet. Connect an adapter and run a deep scan.
           </p>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">

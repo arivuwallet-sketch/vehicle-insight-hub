@@ -177,7 +177,7 @@ function loadLS<T>(key: string, fallback: T): T {
   }
 }
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+export const uid = () => globalThis.crypto.randomUUID();
 
 export function ObdProvider({ children }: { children: ReactNode }) {
   const elmRef = useRef<Elm327 | null>(null);

@@ -149,10 +149,9 @@ function AdaptersPage() {
           Kia, Honda, Toyota and Renault.
         </p>
         <p className="mt-2">
-          Brand-specific actuator and routine tests are currently verified only for: Volvo, Nissan /
-          Infiniti, Mazda, Subaru, Chrysler / Jeep / Dodge / Fiat / Alfa Romeo, and Jaguar / Land
-          Rover. For every other make the Actuation Tests page says so plainly and offers standard
-          UDS diagnostics instead of untested commands.
+          Proprietary module scans, coding, security access and actuator routines require verified
+          service data and compatible factory/pass-thru hardware for the exact model. TorqueDeck does
+          not substitute guessed commands for that manufacturer coverage.
         </p>
       </div>
 

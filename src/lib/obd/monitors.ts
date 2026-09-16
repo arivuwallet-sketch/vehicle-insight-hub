@@ -421,30 +421,10 @@ export interface VehicleContext {
   engine?: string | undefined;
 }
 
-/** Friendly name for a CAN response header, refined by VIN-verified car data. */
-export function ecuLabel(header: string, ctx?: VehicleContext): string {
+/** Conservative name for a standards-based OBD responder. */
+export function ecuLabel(header: string, _ctx?: VehicleContext): string {
   const known: Record<string, string> = {
-    "7E8": "ECM — Engine control module",
-    "7E9": "TCM — Transmission control module",
-    "7EA": "Module 3",
-    "7EB": "Module 4",
-    "7EC": "Module 5",
-    "7ED": "Module 6",
-    "7EE": "Module 7",
-    "7EF": "Module 8",
-    "10": "Legacy module $10",
+    "7E8": "Primary OBD responder",
   };
-  let label = known[header] ?? `Module ${header}`;
-  const fuel = ctx?.fuel ?? "";
-  const hybrid = /hybrid|electric|plug-?in/i.test(fuel);
-  const diesel = /diesel/i.test(fuel);
-  if (header === "7E8") {
-    if (diesel) label = "ECM — Engine control module (diesel)";
-    else if (hybrid) label = "ECM — Engine control module (hybrid powertrain)";
-  }
-  if (header === "7E9" && hybrid) {
-    label = "TCM / hybrid powertrain control module";
-  }
-  const tag = [ctx?.modelYear, ctx?.make].filter(Boolean).join(" ");
-  return tag ? `${label} · ${tag}` : label;
+  return known[header] ?? `OBD responder ${header}`;
 }
