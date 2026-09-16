@@ -833,6 +833,17 @@ export function ObdProvider({ children }: { children: ReactNode }) {
         maxima: { ...maxima.current },
         samples: sampleCount.current,
         notes,
+        log: Object.fromEntries(
+          Object.entries(history).filter(([, arr]) => arr && arr.length > 0),
+        ) as Partial<Record<PidId, Sample[]>>,
+        readiness: readiness
+          ? [...readiness.continuous, ...readiness.nonContinuous].map((m) => ({
+              name: m.name,
+              supported: m.supported,
+              complete: m.complete,
+            }))
+          : undefined,
+        freeze: freeze ? freeze.values : undefined,
       };
       persistSessions([rec, ...sessions]);
       toast.success(
