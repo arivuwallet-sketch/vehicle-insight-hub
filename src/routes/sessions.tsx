@@ -81,8 +81,14 @@ function SessionsPage() {
           >
             <Save className="size-4" /> Save current
           </Button>
+          <Input
+            placeholder="Technician name"
+            value={technician}
+            onChange={(e) => setTechnician(e.target.value)}
+            className="w-44"
+          />
           <Button variant="secondary" onClick={() => window.print()}>
-            <Printer className="size-4" /> Export PDF
+            <Printer className="size-4" /> Print view
           </Button>
         </div>
       </header>
