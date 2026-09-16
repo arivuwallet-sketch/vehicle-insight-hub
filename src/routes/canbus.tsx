@@ -134,6 +134,62 @@ function CanBusPage() {
     };
   }, [elm]);
 
+  const sendFrame = async () => {
+    if (state !== "connected") {
+      toast.error("Connect an adapter first");
+      return;
+    }
+    if (running) {
+      toast.error("Stop the capture first", {
+        description: "Monitor mode is listen-only — the adapter cannot transmit while sniffing.",
+      });
+      return;
+    }
+    const header = txHeader.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
+    const data = txData.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
+    if (!/^[0-9A-F]{3}$|^[0-9A-F]{8}$/.test(header)) {
+      toast.error("Arbitration ID must be 3 hex digits (11-bit) or 8 (29-bit)");
+      return;
+    }
+    if (!data || data.length % 2 || data.length > 16) {
+      toast.error("Data must be 1–8 whole hex bytes");
+      return;
+    }
+    setTxBusy(true);
+    try {
+      await elm.send("ATH1");
+      await elm.send(`ATSH${header}`);
+      const reply = await elm.send(data, 8000);
+      setTxReply(reply.trim() || "No response");
+      for (const line of reply.split("\n")) {
+        const t = line.trim();
+        if (!t || !/[0-9A-F]/i.test(t)) continue;
+        bufRef.current.push(t);
+        const id = t.split(/\s+/)[0] ?? "????";
+        const prev = statRef.current[id];
+        statRef.current[id] = { id, count: (prev?.count ?? 0) + 1, last: t, lastTs: Date.now() };
+      }
+    } catch (e) {
+      setTxReply(e instanceof Error ? e.message : String(e));
+    } finally {
+      await elm.send("ATSH7DF").catch(() => undefined);
+      await elm.send("ATH0").catch(() => undefined);
+      setTxBusy(false);
+    }
+  };
+
+  const toggleRepeat = () => {
+    if (repeatRef.current) {
+      clearInterval(repeatRef.current);
+      repeatRef.current = null;
+      setRepeatMs(0);
+      return;
+    }
+    const ms = 500;
+    setRepeatMs(ms);
+    repeatRef.current = setInterval(() => void sendFrame(), ms);
+  };
+
   const visible = frames.filter((f) => !filter || f.toUpperCase().includes(filter.toUpperCase()));
   const table = Object.values(stats).sort((a, b) => b.count - a.count).slice(0, 24);
 
@@ -183,8 +239,83 @@ function CanBusPage() {
         Monitor mode is passive listening only — the adapter stops sending acknowledgements while it
         sniffs, so live data polling pauses during capture. Some vehicles flood the bus at thousands
         of frames per second; a cheap ELM327 clone will drop frames, an STN-based adapter keeps up.
-        Available monitor commands on this adapter: {MODES.map((m) => m.cmd.split("\r").pop()).join(", ")}.
+        Transmitting is disabled while a capture runs, and capture is disabled while repeating a
+        frame — the adapter can only do one at a time.
       </div>
+
+      <section className="panel no-print grid gap-4 p-4 md:grid-cols-2">
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold">Passive capture (listen only)</h2>
+          <div className="flex flex-wrap gap-2 text-sm">
+            <select
+              value={mode}
+              onChange={(e) => setMode(e.target.value as PassiveMode)}
+              disabled={running}
+              className="h-9 rounded-md border border-input bg-surface px-2 text-sm"
+            >
+              <option value="all">ATMA — all traffic</option>
+              <option value="receive">ATMR — one receive ID</option>
+              <option value="transmit">ATMT — one transmit ID</option>
+            </select>
+            <input
+              value={monitorId}
+              onChange={(e) => setMonitorId(e.target.value)}
+              disabled={running || mode === "all"}
+              placeholder="ID e.g. 7E8"
+              className="h-9 w-28 rounded-md border border-input bg-surface px-3 text-sm"
+            />
+            <input
+              value={cf}
+              onChange={(e) => setCf(e.target.value)}
+              disabled={running}
+              placeholder="ATCF filter"
+              className="h-9 w-32 rounded-md border border-input bg-surface px-3 text-sm"
+            />
+            <input
+              value={cm}
+              onChange={(e) => setCm(e.target.value)}
+              disabled={running}
+              placeholder="ATCM mask"
+              className="h-9 w-32 rounded-md border border-input bg-surface px-3 text-sm"
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Live bus rate: <span className="readout text-signal">{rate}</span> frames/s ·{" "}
+            {Object.keys(stats).length} distinct IDs
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold">Active transmit (writes to the bus)</h2>
+          <div className="flex flex-wrap gap-2">
+            <input
+              value={txHeader}
+              onChange={(e) => setTxHeader(e.target.value)}
+              placeholder="Arbitration ID"
+              className="h-9 w-32 rounded-md border border-input bg-surface px-3 text-sm"
+            />
+            <input
+              value={txData}
+              onChange={(e) => setTxData(e.target.value)}
+              placeholder="Data bytes e.g. 02 01 0C"
+              className="h-9 flex-1 rounded-md border border-input bg-surface px-3 text-sm"
+            />
+            <Button size="sm" onClick={() => void sendFrame()} disabled={txBusy || running}>
+              <Send className="size-4" /> {txBusy ? "Sending…" : "Send frame"}
+            </Button>
+            <Button size="sm" variant="outline" onClick={toggleRepeat} disabled={running}>
+              {repeatMs ? "Stop repeat" : "Repeat 2 Hz"}
+            </Button>
+          </div>
+          <pre className="readout max-h-24 overflow-auto rounded bg-background/60 p-2 text-xs">
+            {txReply || "No frame sent yet."}
+          </pre>
+          <p className="text-xs text-warn">
+            Transmitting writes real frames to the vehicle bus. Only send requests you understand —
+            keep the vehicle stationary.
+          </p>
+        </div>
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-[1fr_360px]">
         <section className="panel scanline p-4">
