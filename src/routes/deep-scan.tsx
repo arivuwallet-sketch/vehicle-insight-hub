@@ -10,13 +10,13 @@ import type { MonitorStatus, ReadinessResult } from "@/lib/obd/monitors";
 export const Route = createFileRoute("/deep-scan")({
   head: () => ({
     meta: [
-      { title: "Full System Deep Scan — TorqueDeck" },
+      { title: "Standard OBD Deep Scan — TorqueDeck" },
       {
         name: "description",
         content:
           "Scan emissions-related OBD responders: fault memory, readiness monitors, Mode 06 test results and Mode 09 vehicle information.",
       },
-      { property: "og:title", content: "Full System Deep Scan — TorqueDeck" },
+      { property: "og:title", content: "Standard OBD Deep Scan — TorqueDeck" },
       {
         property: "og:description",
         content:
@@ -103,7 +103,7 @@ function DeepScanPage() {
     <div className="space-y-6">
       <header className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-wide">Full system deep scan</h1>
+           <h1 className="font-display text-2xl font-bold tracking-wide">Standard OBD deep scan</h1>
           <p className="text-sm text-muted-foreground">
             Emissions-related modules that answer standard OBD-II requests, with fault memory,
             readiness, monitor tests and vehicle information read live from the bus.
@@ -144,7 +144,7 @@ function DeepScanPage() {
               <div className="readout break-all">{car.vin}</div>
             </div>
           )}
-          {car.vinVerified && <Badge variant="secondary">VIN verified</Badge>}
+          {car.vinVerified && <Badge variant="secondary">VIN database matched</Badge>}
           {car.fuel && readiness && (
             <Badge
               variant={

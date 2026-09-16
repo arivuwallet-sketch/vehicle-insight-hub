@@ -41,17 +41,28 @@ function ActuationsPage() {
   }, [active?.make, overrideId]);
 
   const run = async () => {
-    if (state !== "connected") return toast.error("Connect an adapter first");
+    if (state !== "connected") {
+      toast.error("Connect an adapter first");
+      return;
+    }
     const cleanHeader = header.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
     const cleanRequest = request.replace(/\s+/g, "").toUpperCase();
     if (!/^(?:[0-9A-F]{3}|[0-9A-F]{6}|[0-9A-F]{8})$/.test(cleanHeader)) {
-      return toast.error("Enter the documented ECU header");
+      toast.error("Enter the documented ECU header");
+      return;
     }
     if (!REQUEST_PATTERN.test(cleanRequest) || cleanRequest.startsWith("AT")) {
-      return toast.error("Enter a complete hexadecimal diagnostic request");
+      toast.error("Enter a complete hexadecimal diagnostic request");
+      return;
     }
-    if (!source.trim()) return toast.error("Record the source document or reference first");
-    if (!confirmed) return toast.error("Confirm the request is verified for this exact vehicle");
+    if (!source.trim()) {
+      toast.error("Record the source document or reference first");
+      return;
+    }
+    if (!confirmed) {
+      toast.error("Confirm the request is verified for this exact vehicle");
+      return;
+    }
     setBusy(true);
     try {
       const headerReply = await sendRaw(`ATSH${cleanHeader}`);

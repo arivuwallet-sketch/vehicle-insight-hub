@@ -433,7 +433,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     }
   }, [elm]);
 
-  /* ---------------- deep scan (all modules, all modes) ---------------- */
+  /* ---------------- standards-based OBD deep scan ---------------- */
 
   const deepScan = useCallback(async () => {
     if (!elm.connected) {

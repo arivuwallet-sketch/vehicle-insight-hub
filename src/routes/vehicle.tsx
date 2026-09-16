@@ -203,7 +203,7 @@ function VehiclePage() {
             <div className="flex items-center gap-3">
               {official && !official.warning && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
-                  <BadgeCheck className="size-4" /> VIN matched
+                   <BadgeCheck className="size-4" /> VIN database matched
                 </span>
               )}
               {official?.make && (

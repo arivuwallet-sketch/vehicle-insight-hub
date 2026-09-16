@@ -50,7 +50,9 @@ function CanBusPage() {
   const [txReply, setTxReply] = useState("");
   const [txBusy, setTxBusy] = useState(false);
   const [repeatMs, setRepeatMs] = useState(0);
+  const [txConfirmed, setTxConfirmed] = useState(false);
   const repeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const txBusyRef = useRef(false);
   const rateRef = useRef(0);
   const bufRef = useRef<string[]>([]);
   const statRef = useRef<Record<string, FrameStat>>({});
@@ -145,6 +147,11 @@ function CanBusPage() {
       });
       return;
     }
+    if (!txConfirmed) {
+      toast.error("Confirm the active-transmit warning first");
+      return;
+    }
+    if (txBusyRef.current) return;
     const header = txHeader.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
     const data = txData.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
     if (!/^[0-9A-F]{3}$|^[0-9A-F]{8}$/.test(header)) {
@@ -156,9 +163,12 @@ function CanBusPage() {
       return;
     }
     setTxBusy(true);
+    txBusyRef.current = true;
     try {
-      await elm.send("ATH1");
-      await elm.send(`ATSH${header}`);
+      const headersReply = await elm.send("ATH1");
+      if (!/OK/i.test(headersReply)) throw new Error(`Adapter rejected ATH1: ${headersReply}`);
+      const headerReply = await elm.send(`ATSH${header}`);
+      if (!/OK/i.test(headerReply)) throw new Error(`Adapter rejected header: ${headerReply}`);
       const reply = await elm.send(data, 8000);
       setTxReply(reply.trim() || "No response");
       for (const line of reply.split("\n")) {
@@ -174,6 +184,7 @@ function CanBusPage() {
     } finally {
       await elm.send("ATSH7DF").catch(() => undefined);
       await elm.send("ATH0").catch(() => undefined);
+      txBusyRef.current = false;
       setTxBusy(false);
     }
   };
@@ -300,10 +311,10 @@ function CanBusPage() {
               placeholder="Data bytes e.g. 02 01 0C"
               className="h-9 flex-1 rounded-md border border-input bg-surface px-3 text-sm"
             />
-            <Button size="sm" onClick={() => void sendFrame()} disabled={txBusy || running}>
+             <Button size="sm" onClick={() => void sendFrame()} disabled={txBusy || running || !txConfirmed}>
               <Send className="size-4" /> {txBusy ? "Sending…" : "Send frame"}
             </Button>
-            <Button size="sm" variant="outline" onClick={toggleRepeat} disabled={running}>
+             <Button size="sm" variant="outline" onClick={toggleRepeat} disabled={running || !txConfirmed}>
               {repeatMs ? "Stop repeat" : "Repeat 2 Hz"}
             </Button>
           </div>
@@ -314,6 +325,10 @@ function CanBusPage() {
             Transmitting writes real frames to the vehicle bus. Only send requests you understand —
             keep the vehicle stationary.
           </p>
+          <label className="flex items-start gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={txConfirmed} onChange={(event) => setTxConfirmed(event.target.checked)} />
+            I understand these frames are transmitted unchanged and can alter vehicle behavior.
+          </label>
         </div>
       </section>
 

@@ -118,7 +118,7 @@ function GaragePage() {
                     {v.engine && <div className="text-xs text-muted-foreground">{v.engine}</div>}
                     {v.vinVerified && (
                       <div className="mt-1 inline-block rounded bg-ok/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-ok">
-                        VIN verified
+                        VIN database matched
                       </div>
                     )}
                   </div>
