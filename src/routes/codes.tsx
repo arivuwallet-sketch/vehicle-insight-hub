@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
 import { useObd } from "@/lib/obd/store";
-import { DTC_DB_SIZE, SEVERITY_ORDER, lookupDtc, type DtcInfo, type Severity } from "@/lib/obd/dtc";
+import { DTC_DB_SIZE, SEVERITY_ORDER, isValidDtc, lookupDtc, type DtcInfo, type Severity } from "@/lib/obd/dtc";
 
 export const Route = createFileRoute("/codes")({
   head: () => ({
@@ -96,7 +96,9 @@ function CodesPage() {
     return all.sort((a, b) => SEVERITY_ORDER[a.info.severity] - SEVERITY_ORDER[b.info.severity]);
   }, [dtcs, pendingDtcs, permanentDtcs]);
 
-  const lookupResult = query.trim().length >= 4 ? lookupDtc(query) : null;
+  const trimmedQuery = query.trim();
+  const queryIsCode = isValidDtc(trimmedQuery);
+  const lookupResult = queryIsCode ? lookupDtc(trimmedQuery) : null;
 
   return (
     <div className="space-y-6">
@@ -180,11 +182,17 @@ function CodesPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {lookupResult && (
+        {lookupResult ? (
           <div className="mt-4 max-w-2xl">
             <CodeCard info={lookupResult} tag="Lookup" />
           </div>
-        )}
+        ) : trimmedQuery.length >= 3 ? (
+          <p className="mt-3 max-w-2xl text-sm text-warn">
+            “{trimmedQuery}” is not a diagnostic trouble code, so there is nothing to look up. A real
+            code is a letter P, B, C or U, then a digit 0-3, then three characters 0-9 or A-F — for
+            example P0420, U0100 or C1234.
+          </p>
+        ) : null}
       </section>
 
       <Dialog open={confirm} onOpenChange={setConfirm}>
