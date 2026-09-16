@@ -41,6 +41,7 @@ const SEV_STYLE: Record<Severity, string> = {
   serious: "bg-warn/15 text-warn border-warn/40",
   moderate: "bg-info/15 text-info border-info/40",
   minor: "bg-muted text-muted-foreground border-border",
+  unknown: "bg-muted text-muted-foreground border-border",
 };
 
 function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
@@ -49,15 +50,15 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
       <div className="flex flex-wrap items-center gap-3">
         <span className="readout text-xl font-bold text-signal">{info.code}</span>
         <span className={`rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wider ${SEV_STYLE[info.severity]}`}>
-          {info.severity}
+          {info.severity === "unknown" ? "severity unavailable" : `${info.severity} reference severity`}
         </span>
         <Badge variant="secondary">{info.system}</Badge>
         <Badge variant="outline">{tag}</Badge>
       </div>
       <h3 className="mt-2 text-base font-semibold">{info.title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{info.meaning}</p>
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div>
+      {info.definitionAvailable ? <div className="mt-3 grid gap-3 sm:grid-cols-2">
+        {info.repair.length > 0 && <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Likely causes
           </div>
@@ -66,7 +67,7 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
               <li key={c}>{c}</li>
             ))}
           </ul>
-        </div>
+        </div>}
         <div>
           <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Repair steps
@@ -77,7 +78,7 @@ function CodeCard({ info, tag }: { info: DtcInfo; tag: string }) {
             ))}
           </ol>
         </div>
-      </div>
+      </div> : <p className="mt-3 text-xs text-warn">No diagnosis or repair step is inferred. Use verified service information for this VIN and module.</p>}
     </article>
   );
 }
@@ -146,10 +147,10 @@ function CodesPage() {
           </div>
         ))}
         <div className="panel flex items-center gap-2 p-4">
-          <ShieldAlert className={milOn ? "size-6 text-danger" : "size-6 text-muted-foreground"} />
+          <ShieldAlert className={state === "connected" && milOn ? "size-6 text-danger" : "size-6 text-muted-foreground"} />
           <div>
             <div className="text-xs uppercase tracking-wider text-muted-foreground">MIL</div>
-            <div className="font-display font-semibold">{milOn ? "Illuminated" : "Off"}</div>
+            <div className="font-display font-semibold">{state !== "connected" ? "—" : milOn ? "Illuminated" : "Off"}</div>
           </div>
         </div>
       </div>
@@ -173,8 +174,8 @@ function CodesPage() {
           <AlertTriangle className="size-4 text-signal" /> Code dictionary
         </h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          {DTC_DB_SIZE} curated codes with full explanations, plus structured decoding for every
-          other generic P, B, C and U code.
+          {DTC_DB_SIZE} curated reference entries. Unknown and manufacturer-specific codes remain
+          unidentified until checked against verified service information for the vehicle.
         </p>
         <Input
           className="mt-3 max-w-xs"

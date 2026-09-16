@@ -85,7 +85,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div>
             <div className="font-display text-base font-bold tracking-widest">TORQUEDECK</div>
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              OBD-II deep scanner
+              Standards-based OBD-II scanner
             </div>
           </div>
         </div>

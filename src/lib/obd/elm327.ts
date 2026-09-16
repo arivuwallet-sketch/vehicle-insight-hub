@@ -352,7 +352,7 @@ export class Elm327 {
 const NEGATIVE = /NO DATA|UNABLE|ERROR|STOPPED|SEARCHING|TIMEOUT|CAN ERROR|BUS/i;
 
 export function isNegative(resp: string) {
-  return !resp || NEGATIVE.test(resp);
+  return !resp || NEGATIVE.test(resp) || /(?:^|\s)7F\s+[0-9A-F]{2}\s+[0-9A-F]{2}(?:\s|$)/i.test(resp);
 }
 
 /** Flatten an ELM327 hex reply into a byte array, dropping CAN multi-line indices. */
@@ -413,8 +413,13 @@ export function parseDtcResponse(resp: string, mode: 3 | 7 | 0xa): string[] {
     const idx = bytes.indexOf(respMode);
     if (idx === -1) continue;
     let rest = bytes.slice(idx + 1);
-    // CAN replies include a count byte after the mode
-    if (rest.length % 2 === 1) rest = rest.slice(1);
+    // Some CAN adapters include a DTC-count byte. Drop it only when it exactly
+    // matches the number of following two-byte entries; never discard a byte
+    // merely because the reply length is odd.
+    if (rest.length >= 3 && rest.length % 2 === 1 && rest[0] === (rest.length - 1) / 2) {
+      rest = rest.slice(1);
+    }
+    if (rest.length % 2 !== 0) continue;
     out.push(...decodeDtcBytes(rest));
   }
   return Array.from(new Set(out));
@@ -437,8 +442,8 @@ export function parseVin(resp: string): string | null {
     .filter((b) => b >= 0x20 && b < 0x7f)
     .map((b) => String.fromCharCode(b))
     .join("");
-  const m = text.match(/[A-HJ-NPR-Z0-9]{17}/);
-  return m ? m[0] : null;
+  const matches = text.match(/[A-HJ-NPR-Z0-9]{17}/g) ?? [];
+  return matches.length === 1 ? matches[0] ?? null : null;
 }
 
 /* ------------------------------------------------------------------ */

@@ -177,7 +177,7 @@ function loadLS<T>(key: string, fallback: T): T {
   }
 }
 
-export const uid = () => Math.random().toString(36).slice(2, 10);
+export const uid = () => globalThis.crypto.randomUUID();
 
 export function ObdProvider({ children }: { children: ReactNode }) {
   const elmRef = useRef<Elm327 | null>(null);
@@ -361,6 +361,9 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       const a = p[0] ?? 0;
       setMilOn((a & 0x80) !== 0);
       setDtcCount(a & 0x7f);
+    } else {
+      setMilOn(false);
+      setDtcCount(0);
     }
   }, [elm]);
 
@@ -382,6 +385,9 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
   const readVehicleInfo = useCallback(async () => {
     if (!elm.connected) return;
+    setVin(null);
+    setCalId(null);
+    setEcuName(null);
     const v = await elm.send("0902", 8000);
     const parsed = parseVin(v);
     if (parsed) setVin(parsed);
@@ -433,7 +439,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     }
   }, [elm]);
 
-  /* ---------------- deep scan (all modules, all modes) ---------------- */
+  /* ---------------- standards-based OBD deep scan ---------------- */
 
   const deepScan = useCallback(async () => {
     if (!elm.connected) {
@@ -593,7 +599,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
       setLastDeepScan(Date.now());
       toast.success("Deep scan complete", {
-        description: `${found.length} module(s), ${tests.length} monitor test(s) read.`,
+        description: `${found.length} OBD responder(s), ${tests.length} monitor test(s) read.`,
       });
     } catch (e) {
       toast.error("Deep scan failed", {
@@ -650,6 +656,22 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     setStatusText("No adapter connected");
     setTransport(null);
     setLive({});
+    setHistory({});
+    setDtcs([]);
+    setPendingDtcs([]);
+    setPermanentDtcs([]);
+    setMilOn(false);
+    setDtcCount(0);
+    setVin(null);
+    setCalId(null);
+    setEcuName(null);
+    setFreeze(null);
+    setEcus([]);
+    setReadiness(null);
+    setReadinessCycle(null);
+    setMonitorTests([]);
+    setIpt([]);
+    setMode09([]);
   }, [elm]);
 
   const reconnect = useCallback(async () => {
@@ -714,13 +736,20 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       if (!def) return;
       const resp = await elm.send(`01${def.pid}`, 2500);
       const payload = extractPayload(resp, 1, def.pid);
-      if (!payload || payload.length < def.bytes) return;
+      if (!payload || payload.length < def.bytes) {
+        setLive((cur) => {
+          const next = { ...cur };
+          delete next[id];
+          return next;
+        });
+        return;
+      }
       record(id, def.decode(payload.slice(0, def.bytes)));
     };
 
     /** Returns false when the vehicle clearly did not answer the batched request. */
     const readGroup = async (group: PidId[]): Promise<boolean> => {
-      const defs = group.map((id) => PID_BY_ID[id]!).filter(Boolean);
+      const defs = group.map((id) => PID_BY_ID[id]).filter((def): def is PidDef => Boolean(def));
       const unique = Array.from(new Set(defs.map((d) => d.pid)));
       if (unique.length < 2) {
         for (const id of group) await readOne(id);
@@ -733,7 +762,8 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       const answered = unique.filter((p) => parsed[p]).length;
       if (answered < unique.length) return false;
       for (const id of group) {
-        const def = PID_BY_ID[id]!;
+        const def = PID_BY_ID[id];
+        if (!def) continue;
         const data = parsed[def.pid];
         if (!data || data.length < def.bytes) continue;
         record(id, def.decode(data.slice(0, def.bytes)));
@@ -760,6 +790,11 @@ export function ObdProvider({ children }: { children: ReactNode }) {
               await readOne(id);
             }
           } catch {
+            setLive((cur) => {
+              const next = { ...cur };
+              for (const id of group) delete next[id];
+              return next;
+            });
             return;
           }
         }

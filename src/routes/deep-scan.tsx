@@ -10,17 +10,17 @@ import type { MonitorStatus, ReadinessResult } from "@/lib/obd/monitors";
 export const Route = createFileRoute("/deep-scan")({
   head: () => ({
     meta: [
-      { title: "Full System Deep Scan — TorqueDeck" },
+      { title: "Standard OBD Deep Scan — TorqueDeck" },
       {
         name: "description",
         content:
-          "Scan every control module on the vehicle bus: per-ECU fault memory, readiness monitors, Mode 06 on-board test results and Mode 09 vehicle information.",
+          "Scan emissions-related OBD responders: fault memory, readiness monitors, Mode 06 test results and Mode 09 vehicle information.",
       },
-      { property: "og:title", content: "Full System Deep Scan — TorqueDeck" },
+      { property: "og:title", content: "Standard OBD Deep Scan — TorqueDeck" },
       {
         property: "og:description",
         content:
-          "Every control module, every mode: fault memory, readiness, on-board monitor tests and in-use performance counters.",
+          "Standards-based OBD responders, fault memory, readiness, monitor tests and in-use performance counters.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -103,10 +103,10 @@ function DeepScanPage() {
     <div className="space-y-6">
       <header className="no-print flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-wide">Full system deep scan</h1>
+           <h1 className="font-display text-2xl font-bold tracking-wide">Standard OBD deep scan</h1>
           <p className="text-sm text-muted-foreground">
-            Every responding control module, all fault memory, readiness monitors, on-board monitor
-            test results and vehicle information — read live off the bus.
+            Emissions-related modules that answer standard OBD-II requests, with fault memory,
+            readiness, monitor tests and vehicle information read live from the bus.
           </p>
         </div>
         <div className="flex gap-2">
@@ -144,7 +144,7 @@ function DeepScanPage() {
               <div className="readout break-all">{car.vin}</div>
             </div>
           )}
-          {car.vinVerified && <Badge variant="secondary">VIN verified</Badge>}
+          {car.vinVerified && <Badge variant="secondary">VIN database matched</Badge>}
           {car.fuel && readiness && (
             <Badge
               variant={
@@ -174,11 +174,11 @@ function DeepScanPage() {
 
       <section className="space-y-3">
         <h2 className="font-display text-sm font-bold uppercase tracking-widest">
-          Control modules ({ecus.length})
+          OBD responders ({ecus.length})
         </h2>
         {ecus.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No modules scanned yet. Connect an adapter and run a deep scan.
+            No OBD responders scanned yet. Connect an adapter and run a deep scan.
           </p>
         ) : (
           <div className="grid gap-4 xl:grid-cols-2">

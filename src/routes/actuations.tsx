@@ -1,35 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Play, ShieldAlert, Wrench } from "lucide-react";
+import { AlertTriangle, ExternalLink, Send, ShieldAlert, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { OfflineNotice } from "@/components/obd/ConnectionBar";
 import { useObd } from "@/lib/obd/store";
-import {
-  MAKE_PROFILES,
-  RISK_NOTE,
-  profileForMake,
-  type ActuationTest,
-  type MakeProfile,
-  type Risk,
-} from "@/lib/obd/actuations";
-import { cn } from "@/lib/utils";
+import { isNegative } from "@/lib/obd/elm327";
+import { MAKE_PROFILES, profileForMake, type MakeProfile } from "@/lib/obd/actuations";
 
 export const Route = createFileRoute("/actuations")({
   head: () => ({
     meta: [
-      { title: "Actuation Tests & Security Routines — TorqueDeck" },
-      {
-        name: "description",
-        content:
-          "Run manufacturer actuation tests, adaptations and security access routines per vehicle, with every request sent live to the car and the raw ECU reply shown.",
-      },
-      { property: "og:title", content: "Actuation Tests & Security Routines — TorqueDeck" },
-      {
-        property: "og:description",
-        content: "Per-make bi-directional tests and UDS routines sent as real requests through the expert console.",
-      },
+      { title: "Documented Actuation Console — TorqueDeck" },
+      { name: "description", content: "Send documented manufacturer diagnostic requests and inspect the vehicle controller's unmodified response." },
+      { property: "og:title", content: "Documented Actuation Console — TorqueDeck" },
+      { property: "og:description", content: "A guarded console for verified vehicle-specific diagnostic requests without guessed routines." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -37,188 +23,111 @@ export const Route = createFileRoute("/actuations")({
   component: ActuationsPage,
 });
 
-const RISK_STYLE: Record<Risk, string> = {
-  safe: "border-info/40 bg-info/10 text-info",
-  caution: "border-warn/40 bg-warn/10 text-warn",
-  restricted: "border-danger/40 bg-danger/10 text-danger",
-};
-
-interface StepResult {
-  cmd: string;
-  reply: string;
-  ok: boolean;
-  at: number;
-}
+const REQUEST_PATTERN = /^(?:AT[0-9A-Z ]{1,30}|[0-9A-F]{2,8192})$/;
 
 function ActuationsPage() {
   const { vehicles, activeVehicleId, sendRaw, state } = useObd();
-  const active = vehicles.find((v) => v.id === activeVehicleId);
+  const active = vehicles.find((vehicle) => vehicle.id === activeVehicleId);
   const [overrideId, setOverrideId] = useState<string | null>(null);
-  const [running, setRunning] = useState<string | null>(null);
-  const [results, setResults] = useState<Record<string, StepResult[]>>({});
+  const [header, setHeader] = useState("");
+  const [request, setRequest] = useState("");
+  const [source, setSource] = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [reply, setReply] = useState("");
 
   const profile: MakeProfile = useMemo(() => {
-    if (overrideId) return MAKE_PROFILES.find((p) => p.id === overrideId) ?? profileForMake("");
+    if (overrideId) return MAKE_PROFILES.find((item) => item.id === overrideId) ?? profileForMake("");
     return profileForMake(active?.make ?? "");
-  }, [overrideId, active?.make]);
+  }, [active?.make, overrideId]);
 
-  const runTest = async (test: ActuationTest) => {
+  const run = async () => {
     if (state !== "connected") {
       toast.error("Connect an adapter first");
       return;
     }
-    setRunning(test.id);
-    setResults((r) => ({ ...r, [test.id]: [] }));
+    const cleanHeader = header.replace(/[^0-9A-Fa-f]/g, "").toUpperCase();
+    const cleanRequest = request.replace(/\s+/g, "").toUpperCase();
+    if (!/^(?:[0-9A-F]{3}|[0-9A-F]{6}|[0-9A-F]{8})$/.test(cleanHeader)) {
+      toast.error("Enter the documented ECU header");
+      return;
+    }
+    if (!REQUEST_PATTERN.test(cleanRequest) || cleanRequest.startsWith("AT")) {
+      toast.error("Enter a complete hexadecimal diagnostic request");
+      return;
+    }
+    if (!source.trim()) {
+      toast.error("Record the source document or reference first");
+      return;
+    }
+    if (!confirmed) {
+      toast.error("Confirm the request is verified for this exact vehicle");
+      return;
+    }
+    setBusy(true);
     try {
-      const header = `ATSH${profile.header}`;
-      const pre = await sendRaw(header);
-      setResults((r) => ({
-        ...r,
-        [test.id]: [{ cmd: header, reply: pre, ok: /ok/i.test(pre), at: Date.now() }],
-      }));
-      for (const step of test.steps) {
-        const reply = await sendRaw(step.cmd);
-        const ok = !/^7F|NO DATA|ERROR|UNABLE|CAN ERROR/i.test(reply.trim());
-        setResults((r) => ({
-          ...r,
-          [test.id]: [...(r[test.id] ?? []), { cmd: step.cmd, reply, ok, at: Date.now() }],
-        }));
-      }
-      toast.success(`${test.name} finished — read the ECU replies below`);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Test failed");
+      const headerReply = await sendRaw(`ATSH${cleanHeader}`);
+      if (!/OK/i.test(headerReply)) throw new Error(`Adapter rejected header: ${headerReply || "no reply"}`);
+      const response = await sendRaw(cleanRequest);
+      if (isNegative(response)) throw new Error(`Controller rejected the request: ${response || "no reply"}`);
+      setReply(response || "(empty adapter reply)");
+      toast.success("Request sent — inspect the controller reply");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setReply(message);
+      toast.error("Request failed", { description: message });
     } finally {
-      await sendRaw("ATSH7E0").catch(() => undefined);
-      setRunning(null);
+      await sendRaw("ATSH7DF").catch(() => undefined);
+      setBusy(false);
     }
   };
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold">Actuation Tests & Routines</h1>
-        <p className="text-sm text-muted-foreground">
-          Manufacturer tests for the car selected in your garage. Every step is a real request sent
-          to the vehicle — the ECU's own reply is shown, nothing is simulated.
-        </p>
+        <h1 className="text-2xl font-bold">Documented Actuation Console</h1>
+        <p className="text-sm text-muted-foreground">No built-in manufacturer routine is guessed or generated.</p>
       </header>
-
       <OfflineNotice />
 
-      <div className="panel flex flex-wrap items-center gap-3 p-4 text-sm">
+      <section className="panel flex flex-wrap items-center gap-3 p-4 text-sm">
         <Wrench className="size-4 shrink-0 text-signal" />
         <span className="text-muted-foreground">
-          {active ? (
-            <>
-              Selected car:{" "}
-              <strong className="text-foreground">
-                {active.nickname || `${active.year ?? ""} ${active.make} ${active.model}`.trim()}
-              </strong>{" "}
-              — matched to <strong className="text-foreground">{profile.make}</strong>
-            </>
-          ) : (
-            <>
-              No car selected. Pick one in the <Link to="/garage" className="text-signal underline">Garage</Link> or
-              choose a make below.
-            </>
-          )}
+          Vehicle: <strong className="text-foreground">{active ? active.nickname || `${active.year} ${active.make} ${active.model}`.trim() : "not selected"}</strong>
+          {" · "}Make family: <strong className="text-foreground">{profile.make}</strong>
         </span>
-        <select
-          className="ml-auto rounded-md border border-border bg-background px-2 py-1 text-sm"
-          value={overrideId ?? profile.id}
-          onChange={(e) => setOverrideId(e.target.value)}
-        >
-          {MAKE_PROFILES.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.make}
-            </option>
-          ))}
+        <select className="ml-auto rounded-md border border-border bg-background px-2 py-1 text-sm" value={overrideId ?? profile.id} onChange={(event) => setOverrideId(event.target.value)}>
+          {MAKE_PROFILES.map((item) => <option key={item.id} value={item.id}>{item.make}</option>)}
         </select>
-      </div>
+      </section>
 
-      {profile.verified === false && (
-        <div className="panel flex items-start gap-3 border-warn/40 p-4 text-sm">
-          <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />
-          <p className="text-muted-foreground">
-            Brand-specific actuation routines for{" "}
-            <strong className="text-foreground">{profile.make}</strong> aren&apos;t verified yet —
-            standard UDS diagnostics only. Everything listed below is generic ISO 14229 / OBD-II and
-            works on any compliant vehicle.
-          </p>
+      <section className="panel flex items-start gap-3 border-warn/40 p-4 text-sm">
+        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" />
+        <p className="text-muted-foreground">TorqueDeck has no verified proprietary routine database for {profile.make}. Obtain the exact ECU address, request bytes, preconditions and recovery procedure from manufacturer service information for the VIN.</p>
+      </section>
+
+      <section className="panel space-y-4 p-5">
+        <div className="flex items-start gap-3 text-sm">
+          <ShieldAlert className="mt-0.5 size-5 shrink-0 text-danger" />
+          <p className="text-muted-foreground">A valid-looking request can move an actuator, erase learned values or damage a controller. The app sends the bytes unchanged and cannot determine whether they are safe for the connected vehicle.</p>
         </div>
-      )}
-
-      <div className="panel flex items-start gap-3 border-danger/40 p-4 text-sm">
-
-        <ShieldAlert className="mt-0.5 size-5 shrink-0 text-danger" />
-        <p className="text-muted-foreground">
-          These commands move real actuators and can write to control modules. Keep hands clear of
-          fans and belts, work with a battery maintainer connected, and stop if a module answers with
-          a negative response (7F). Key programming, immobiliser learning and flash coding need the
-          maker's seed/key algorithm and are not possible from a browser.
-        </p>
-      </div>
-
-      <p className="readout text-xs text-muted-foreground">
-        Diagnostic address in use: {profile.header} — {profile.headerNote}
-      </p>
-
-      <div className="grid gap-4">
-        {profile.tests.map((test) => {
-          const res = results[test.id] ?? [];
-          return (
-            <article key={test.id} className="panel space-y-3 p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="font-semibold">{test.name}</h2>
-                    <Badge variant="outline" className={cn("text-[10px] uppercase", RISK_STYLE[test.risk])}>
-                      {test.risk}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 max-w-3xl text-sm text-muted-foreground">{test.description}</p>
-                </div>
-                <Button
-                  size="sm"
-                  disabled={state !== "connected" || running !== null}
-                  onClick={() => void runTest(test)}
-                >
-                  <Play className="size-4" />
-                  {running === test.id ? "Running…" : "Run test"}
-                </Button>
-              </div>
-
-              <div className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/30 p-3 text-xs text-muted-foreground">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-warn" />
-                <span>
-                  <strong className="text-foreground">Before you run:</strong> {test.precondition}{" "}
-                  {RISK_NOTE[test.risk]}
-                </span>
-              </div>
-
-              <ol className="readout space-y-1 text-xs">
-                {test.steps.map((s, i) => (
-                  <li key={`${test.id}-${i}`} className="flex flex-wrap gap-2">
-                    <span className="font-semibold text-signal">{s.cmd}</span>
-                    <span className="text-muted-foreground">{s.note}</span>
-                  </li>
-                ))}
-              </ol>
-
-              {res.length > 0 && (
-                <div className="readout space-y-1 rounded-md border border-border bg-background p-3 text-xs">
-                  {res.map((r, i) => (
-                    <div key={`${test.id}-r-${i}`} className="flex flex-wrap gap-2">
-                      <span className="text-muted-foreground">&gt; {r.cmd}</span>
-                      <span className={r.ok ? "text-success" : "text-danger"}>{r.reply || "(no reply)"}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </article>
-          );
-        })}
-      </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Input value={header} onChange={(event) => setHeader(event.target.value)} placeholder="Documented ECU header, e.g. 7E0" spellCheck={false} />
+          <Input value={request} onChange={(event) => setRequest(event.target.value)} placeholder="Documented request bytes" spellCheck={false} />
+        </div>
+        <Input value={source} onChange={(event) => setSource(event.target.value)} placeholder="Source: manual title, section, revision or service reference" />
+        <label className="flex items-start gap-2 text-sm text-muted-foreground">
+          <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" />
+          I verified this address and request for this exact model, year, engine and controller.
+        </label>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => void run()} disabled={busy || state !== "connected" || !confirmed}>
+            <Send className="size-4" /> {busy ? "Sending…" : "Send documented request"}
+          </Button>
+          <Button variant="outline" asChild><Link to="/expert"><ExternalLink className="size-4" /> Open full console</Link></Button>
+        </div>
+        <pre className="readout min-h-20 overflow-auto rounded-md border border-border bg-background p-3 text-xs">{reply || "No request sent."}</pre>
+      </section>
     </div>
   );
 }

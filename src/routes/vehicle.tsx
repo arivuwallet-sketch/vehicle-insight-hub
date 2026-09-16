@@ -108,7 +108,7 @@ function VehiclePage() {
       engine: engineDescription === "Unavailable" ? base.engine : engineDescription,
       fuel: official.fuelType ?? base.fuel,
       nickname: base.nickname || [official.modelYear, official.make, official.model].filter(Boolean).join(" "),
-      vinVerified: true,
+      vinVerified: !official.warning && decoded.checkDigitOk !== false,
     };
     saveVehicle(updated);
     setActiveVehicleId(updated.id);
@@ -203,7 +203,7 @@ function VehiclePage() {
             <div className="flex items-center gap-3">
               {official && !official.warning && (
                 <span className="flex items-center gap-1.5 text-xs font-medium text-ok">
-                  <BadgeCheck className="size-4" /> VIN matched
+                   <BadgeCheck className="size-4" /> VIN database matched
                 </span>
               )}
               {official?.make && (
@@ -216,8 +216,7 @@ function VehiclePage() {
           </div>
           {official?.make && (
             <p className="mb-3 text-xs text-muted-foreground">
-              Saving sets this car's official make, model, year and engine, so actuation tests and
-              code severity match the real vehicle.
+               Saving stores the database make, model, year and engine with this garage entry.
             </p>
           )}
 

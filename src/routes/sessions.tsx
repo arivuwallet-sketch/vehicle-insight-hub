@@ -199,7 +199,7 @@ function SessionsPage() {
       )}
 
       <p className="no-print text-xs text-muted-foreground">
-        {DTC_DB_SIZE}+ generic fault definitions are used to describe codes in these reports.
+        {DTC_DB_SIZE} curated reference entries are available. Unknown codes are never guessed.
       </p>
     </div>
   );
