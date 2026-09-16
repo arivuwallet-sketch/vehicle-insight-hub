@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeftRight,
   Camera,
   Car,
   Cpu,
