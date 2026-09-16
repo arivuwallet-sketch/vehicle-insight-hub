@@ -182,11 +182,17 @@ function CodesPage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {lookupResult && (
+        {lookupResult ? (
           <div className="mt-4 max-w-2xl">
             <CodeCard info={lookupResult} tag="Lookup" />
           </div>
-        )}
+        ) : trimmedQuery.length >= 3 ? (
+          <p className="mt-3 max-w-2xl text-sm text-warn">
+            “{trimmedQuery}” is not a diagnostic trouble code, so there is nothing to look up. A real
+            code is a letter P, B, C or U, then a digit 0-3, then three characters 0-9 or A-F — for
+            example P0420, U0100 or C1234.
+          </p>
+        ) : null}
       </section>
 
       <Dialog open={confirm} onOpenChange={setConfirm}>
