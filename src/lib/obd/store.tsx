@@ -853,7 +853,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeVehicleId, adapterName, dtcs, pendingDtcs, protocolName, sessions, vehicles, vin],
+    [activeVehicleId, adapterName, dtcs, freeze, history, pendingDtcs, protocolName, readiness, sessions, vehicles, vin],
   );
 
   const deleteSession = (id: string) => persistSessions(sessions.filter((s) => s.id !== id));
