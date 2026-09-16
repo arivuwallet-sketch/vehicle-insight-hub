@@ -82,6 +82,12 @@ export interface SessionRecord {
   maxima: Partial<Record<PidId, number>>;
   samples: number;
   notes: string;
+  /** Every live sample recorded during the session (older sessions may omit this). */
+  log?: Partial<Record<PidId, Sample[]>> | undefined;
+  /** Readiness monitors as reported by Mode 01 PID 01 at save time. */
+  readiness?: { name: string; supported: boolean; complete: boolean }[] | undefined;
+  /** Freeze frame values captured with Mode 02. */
+  freeze?: { label: string; value: string }[] | undefined;
 }
 
 export interface CodeHistoryEntry {
@@ -827,6 +833,17 @@ export function ObdProvider({ children }: { children: ReactNode }) {
         maxima: { ...maxima.current },
         samples: sampleCount.current,
         notes,
+        log: Object.fromEntries(
+          Object.entries(history).filter(([, arr]) => arr && arr.length > 0),
+        ) as Partial<Record<PidId, Sample[]>>,
+        readiness: readiness
+          ? [...readiness.continuous, ...readiness.nonContinuous].map((m) => ({
+              name: m.name,
+              supported: m.supported,
+              complete: m.complete,
+            }))
+          : undefined,
+        freeze: freeze ? freeze.values : undefined,
       };
       persistSessions([rec, ...sessions]);
       toast.success(
@@ -836,7 +853,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       );
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeVehicleId, adapterName, dtcs, pendingDtcs, protocolName, sessions, vehicles, vin],
+    [activeVehicleId, adapterName, dtcs, freeze, history, pendingDtcs, protocolName, readiness, sessions, vehicles, vin],
   );
 
   const deleteSession = (id: string) => persistSessions(sessions.filter((s) => s.id !== id));

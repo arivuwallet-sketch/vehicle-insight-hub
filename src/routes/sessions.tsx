@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { History, Printer, Save, Trash2 } from "lucide-react";
+import { FileSpreadsheet, FileText, History, Printer, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useObd } from "@/lib/obd/store";
 import { DTC_DB_SIZE, lookupDtc } from "@/lib/obd/dtc";
 import { PID_BY_ID, type PidId } from "@/lib/obd/pids";
+import { exportSessionCsv, exportSessionPdf } from "@/lib/obd/export";
 
 export const Route = createFileRoute("/sessions")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -38,6 +39,7 @@ function SessionsPage() {
   const { vehicle: vehicleFilter } = Route.useSearch();
   const navigate = Route.useNavigate();
   const [notes, setNotes] = useState("");
+  const [technician, setTechnician] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
 
   const car = vehicleFilter ? vehicles.find((v) => v.id === vehicleFilter) : undefined;
@@ -81,8 +83,14 @@ function SessionsPage() {
           >
             <Save className="size-4" /> Save current
           </Button>
+          <Input
+            placeholder="Technician name"
+            value={technician}
+            onChange={(e) => setTechnician(e.target.value)}
+            className="w-44"
+          />
           <Button variant="secondary" onClick={() => window.print()}>
-            <Printer className="size-4" /> Export PDF
+            <Printer className="size-4" /> Print view
           </Button>
         </div>
       </header>
@@ -129,6 +137,12 @@ function SessionsPage() {
                   <div className="no-print flex gap-2">
                     <Button size="sm" variant="ghost" onClick={() => setOpenId(open ? null : s.id)}>
                       {open ? "Hide detail" : "View detail"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => exportSessionCsv(s)}>
+                      <FileSpreadsheet className="size-3.5" /> CSV
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => exportSessionPdf(s, technician)}>
+                      <FileText className="size-3.5" /> PDF
                     </Button>
                     <Button
                       size="sm"

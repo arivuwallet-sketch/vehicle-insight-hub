@@ -2,6 +2,7 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import {
   Activity,
   AlertTriangle,
+  ArrowLeftRight,
   Camera,
   Car,
   Cpu,
@@ -38,6 +39,7 @@ const NAV = [
   { to: "/expert", label: "Expert Console", icon: Terminal },
   { to: "/garage", label: "Garage", icon: Car },
   { to: "/sessions", label: "Sessions", icon: History },
+  { to: "/compare", label: "Compare", icon: ArrowLeftRight },
   { to: "/adapters", label: "Adapters", icon: Usb },
 ] as const;
 
