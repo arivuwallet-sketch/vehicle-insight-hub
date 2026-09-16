@@ -608,7 +608,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
       setDeepScanning(false);
       setDeepStep("");
     }
-  }, [elm, probeSupportedPids]);
+  }, [elm, probeSupportedPids, vehicles, activeVehicleId, vin]);
 
   const connect = useCallback(
     async (kind: "serial" | "bluetooth") => {
