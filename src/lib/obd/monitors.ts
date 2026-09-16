@@ -413,8 +413,16 @@ export function splitByEcu(resp: string): EcuResponse[] {
   });
 }
 
-/** Friendly name for a CAN response header. */
-export function ecuLabel(header: string): string {
+/** Context from the VIN-verified garage entry, used only to refine labels. */
+export interface VehicleContext {
+  make?: string | undefined;
+  modelYear?: string | undefined;
+  fuel?: string | undefined;
+  engine?: string | undefined;
+}
+
+/** Friendly name for a CAN response header, refined by VIN-verified car data. */
+export function ecuLabel(header: string, ctx?: VehicleContext): string {
   const known: Record<string, string> = {
     "7E8": "ECM — Engine control module",
     "7E9": "TCM — Transmission control module",
@@ -426,5 +434,17 @@ export function ecuLabel(header: string): string {
     "7EF": "Module 8",
     "10": "Legacy module $10",
   };
-  return known[header] ?? `Module ${header}`;
+  let label = known[header] ?? `Module ${header}`;
+  const fuel = ctx?.fuel ?? "";
+  const hybrid = /hybrid|electric|plug-?in/i.test(fuel);
+  const diesel = /diesel/i.test(fuel);
+  if (header === "7E8") {
+    if (diesel) label = "ECM — Engine control module (diesel)";
+    else if (hybrid) label = "ECM — Engine control module (hybrid powertrain)";
+  }
+  if (header === "7E9" && hybrid) {
+    label = "TCM / hybrid powertrain control module";
+  }
+  const tag = [ctx?.modelYear, ctx?.make].filter(Boolean).join(" ");
+  return tag ? `${label} · ${tag}` : label;
 }
