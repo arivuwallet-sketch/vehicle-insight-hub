@@ -17,6 +17,7 @@ import {
   isNegative,
   openBluetooth,
   openSerial,
+  parseBatchResponse,
   parseDtcResponse,
   parseVin,
   serialSupported,
