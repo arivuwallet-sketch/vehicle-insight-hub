@@ -381,30 +381,6 @@ const SYSTEM_BY_LETTER: Record<string, DtcInfo["system"]> = {
   U: "Network",
 };
 
-const GENERIC_REPAIR: Record<DtcInfo["system"], string[]> = {
-  Powertrain: [
-    "Record freeze frame data before clearing anything — it shows the conditions when the fault stored.",
-    "Inspect the wiring, connector and ground for the named circuit; back-probe rather than unplugging.",
-    "Compare the suspect live value against a known-good reading at the same engine conditions.",
-    "Repair the root cause, clear the code, then drive the readiness cycle and rescan to confirm.",
-  ],
-  Body: [
-    "Operate the affected function while watching live data to see if the request reaches the module.",
-    "Check power, ground and connector condition at the component before replacing it.",
-    "Flex door, seat and tailgate looms while monitoring — these chafe at hinge points.",
-  ],
-  Chassis: [
-    "Treat brake, steering and stability faults as safety-critical; verify the repair before road use.",
-    "Compare all wheel speed or position sensor readings in live data during a slow drive.",
-    "Inspect sensor tips, tone rings and connectors for rust, debris and water ingress.",
-  ],
-  Network: [
-    "Run a full deep scan: the silent module usually reports nothing at all.",
-    "Check power and ground at the missing module before suspecting the bus wiring.",
-    "Measure CAN high to CAN low with the ignition off — roughly 60 ohms is healthy.",
-  ],
-};
-
 /**
  * A real SAE J2012 diagnostic trouble code: letter P/B/C/U, a 0-3 digit,
  * then three hex digits. Anything else is not a code and must not be decoded.

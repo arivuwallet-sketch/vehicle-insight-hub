@@ -20,7 +20,7 @@ describe("ELM327 response parsing", () => {
   });
 
   test("rejects malformed odd-length DTC payloads", () => {
-    expect(parseDtcResponse("43 01 71 FF", 3)).toEqual([]);
+    expect(parseDtcResponse("43 02 71 FF", 3)).toEqual([]);
   });
 
   test("parses a complete multi-PID reply", () => {
