@@ -599,7 +599,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
 
       setLastDeepScan(Date.now());
       toast.success("Deep scan complete", {
-        description: `${found.length} module(s), ${tests.length} monitor test(s) read.`,
+        description: `${found.length} OBD responder(s), ${tests.length} monitor test(s) read.`,
       });
     } catch (e) {
       toast.error("Deep scan failed", {
@@ -671,7 +671,7 @@ export function ObdProvider({ children }: { children: ReactNode }) {
     setReadinessCycle(null);
     setMonitorTests([]);
     setIpt([]);
-    setMode09({});
+    setMode09([]);
   }, [elm]);
 
   const reconnect = useCallback(async () => {
